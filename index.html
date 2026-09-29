@@ -55,7 +55,9 @@ input:focus,.cur button:focus-visible{outline:2px solid var(--accent);outline-of
 .result{background:var(--accent-soft);border-radius:8px;padding:16px;display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end}
 .result .big{font-family:var(--mono);font-size:38px;font-weight:600;color:var(--accent);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
 .result .pair{flex:1}
-.pair-row{display:flex;flex-wrap:wrap;gap:4px 28px;align-items:baseline}
+.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 20px}
+.trio .big{font-size:28px}
+.trio .cap{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 .result .mid{font-family:var(--mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
 .result .hint{font-size:13px;color:var(--muted);margin-top:4px}
 .result .hint b{color:var(--ink);font-family:var(--mono)}
@@ -106,10 +108,13 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     </div>
 
     <div id="fwdBox">
-      <label for="price">Cena sprzedaży brutto</label>
-      <div class="field">
+      <label for="price">Cena sprzedaży (EUR)</label>
+      <div class="field has-cur">
         <input id="price" type="number" inputmode="decimal" min="0" step="0.01" value="269">
-        <span class="unit">EUR</span>
+        <div class="cur">
+          <button id="pbGross" aria-pressed="true">brutto</button>
+          <button id="pbNet" aria-pressed="false">netto</button>
+        </div>
       </div>
     </div>
 
@@ -130,10 +135,11 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
     <div class="result" id="resFwd">
       <div class="pair">
-        <span class="lbl">Na konto netto</span>
-        <div class="pair-row">
-          <div class="big" id="rNetEur">–</div>
-          <div class="big" id="rNetPln">–</div>
+        <span class="lbl">Na koncie</span>
+        <div class="trio">
+          <div><div class="big" id="rNetEur">–</div><div class="cap">EUR netto</div></div>
+          <div><div class="big" id="rNetPln">–</div><div class="cap">PLN netto</div></div>
+          <div><div class="big" id="rGrossPln">–</div><div class="cap">PLN brutto</div></div>
         </div>
       </div>
     </div>
@@ -207,7 +213,7 @@ const $ = id => document.getElementById(id);
 const SET = ["vat","fee","feeVat","accs","ship","extra","rate"];
 const DEF = {vat:19,fee:7,feeVat:23,accs:1.5,ship:9,extra:0,rate:4.34575254};
 const KEY = "amz-calc-v2";
-let mode = "fwd", cur = "PLN", basis = "gross";
+let mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross";
 
 const fmt = n => n.toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2});
 const eur = n => fmt(n) + " €";
@@ -240,8 +246,9 @@ function breakdown(P, p){
   const afterFee = P - feeGross;
   const accs = afterFee * a;
   const afterAccs = afterFee - accs;
-  const netEur = afterAccs - vat + feeVat - p.ship - p.extra;
-  return {P, vat, netSale:P - vat, feeNet, feeVat, feeGross, afterFee, accs, afterAccs, netEur, netPln: netEur * p.rate};
+  const inflowEur = afterAccs - p.ship - p.extra;   // wpływ przed rozliczeniem VAT
+  const netEur = inflowEur - vat + feeVat;
+  return {P, vat, netSale:P - vat, feeNet, feeVat, feeGross, afterFee, accs, afterAccs, netEur, netPln: netEur * p.rate, grossPln: inflowEur * p.rate};
 }
 // Wynik jest liniowy względem ceny: kwota = k·P − stałe
 // netto: po rozliczeniu VAT; brutto: wpływ z Amazon po ACCS i kosztach, przed rozliczeniem VAT
@@ -264,10 +271,13 @@ function render(){
   $("curPln").setAttribute("aria-pressed", cur === "PLN");
   $("basNet").setAttribute("aria-pressed", basis === "net");
   $("basGross").setAttribute("aria-pressed", basis === "gross");
+  $("pbNet").setAttribute("aria-pressed", priceBasis === "net");
+  $("pbGross").setAttribute("aria-pressed", priceBasis === "gross");
 
   let P;
   if (mode === "fwd"){
-    P = parseFloat($("price").value) || 0;
+    const v = parseFloat($("price").value) || 0;
+    P = priceBasis === "net" ? v * (1 + p.vat/100) : v;
   } else {
     const t = parseFloat($("target").value) || 0;
     const amountEur = cur === "PLN" ? (p.rate ? t / p.rate : 0) : t;
@@ -281,6 +291,7 @@ function render(){
 
   $("rNetEur").textContent = eur(b.netEur);
   $("rNetPln").textContent = pln(b.netPln);
+  $("rGrossPln").textContent = pln(b.grossPln);
   $("pKeep").textContent = pct(keep);
   $("pCost").textContent = pct(1 - keep);
   $("mKeep").style.width = Math.max(0, Math.min(100, keep*100)) + "%";
@@ -320,6 +331,8 @@ $("curEur").onclick = () => { cur = "EUR"; render(); };
 $("curPln").onclick = () => { cur = "PLN"; render(); };
 $("basNet").onclick = () => { basis = "net"; render(); };
 $("basGross").onclick = () => { basis = "gross"; render(); };
+$("pbNet").onclick = () => { priceBasis = "net"; render(); };
+$("pbGross").onclick = () => { priceBasis = "gross"; render(); };
 $("reset").onclick = () => { SET.forEach(k => $(k).value = DEF[k]); render(); };
 ["price","target",...SET].forEach(k => $(k).addEventListener("input", render));
 
