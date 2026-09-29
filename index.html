@@ -88,8 +88,15 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 .scale td:first-child,.scale th:first-child{text-align:left;padding-left:0}
 .scale tr.hl td{color:var(--accent);font-weight:600}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
-.grid input{width:100%;font-family:var(--mono);font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.sgroup{display:flex;flex-direction:column}
+.sgroup h3{font-size:13px;font-weight:600;margin:0 0 4px;color:var(--ink)}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:none}
+.srow label{font-size:14px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);margin:0}
+.srow label small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.sin{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.sin input{width:120px;text-align:right;font-family:var(--mono);font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.sin i{font-style:normal;font-family:var(--mono);color:var(--muted);width:18px}
 .note{font-size:12px;color:var(--muted);margin:0}
 </style>
 </head>
@@ -195,17 +202,26 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
   <section class="panel">
     <h2>Ustawienia</h2>
-    <div class="grid">
-      <div><label for="vat">VAT kraju %</label><input id="vat" type="number" step="0.1" value="19"></div>
-      <div><label for="fee">Prowizja Amazon %</label><input id="fee" type="number" step="0.1" value="7"></div>
-      <div><label for="feeVat">VAT od prowizji %</label><input id="feeVat" type="number" step="0.1" value="23"></div>
-      <div><label for="plVat">VAT PL (do PLN brutto) %</label><input id="plVat" type="number" step="0.1" value="23"></div>
-      <div><label for="accs">ACCS %</label><input id="accs" type="number" step="0.1" value="1.5"></div>
-      <div><label for="ship">Wysyłka EUR</label><input id="ship" type="number" step="0.01" value="9"></div>
-      <div><label for="extra">Dodatkowe koszty EUR</label><input id="extra" type="number" step="0.01" value="0"></div>
-      <div><label for="rate">Kurs Amazon EUR/PLN</label><input id="rate" type="number" step="0.00000001" value="4.34575254"></div>
+    <div class="sgroup">
+      <h3>Sprzedaż w Niemczech</h3>
+      <div class="srow"><label for="vat">VAT niemiecki<small>odprowadzany od ceny sprzedaży</small></label><span class="sin"><input id="vat" type="number" step="0.1" value="19"><i>%</i></span></div>
     </div>
-    <p class="note">Prowizja netto to % od ceny brutto, a Amazon potrąca ją razem z VAT (7% + 23% VAT daje 23,16 € przy 269 €). ACCS liczony od kwoty po prowizji. Kurs: z wypłaty Amazon, bo po nim pieniądze trafiają na konto.</p>
+    <div class="sgroup">
+      <h3>Opłaty Amazon</h3>
+      <div class="srow"><label for="fee">Prowizja<small>netto, liczona od ceny brutto</small></label><span class="sin"><input id="fee" type="number" step="0.1" value="7"><i>%</i></span></div>
+      <div class="srow"><label for="feeVat">VAT od prowizji<small>doliczany przez Amazon, odzyskujesz go</small></label><span class="sin"><input id="feeVat" type="number" step="0.1" value="23"><i>%</i></span></div>
+      <div class="srow"><label for="accs">ACCS — przewalutowanie<small>od kwoty po prowizji</small></label><span class="sin"><input id="accs" type="number" step="0.1" value="1.5"><i>%</i></span></div>
+    </div>
+    <div class="sgroup">
+      <h3>Twoje koszty</h3>
+      <div class="srow"><label for="ship">Wysyłka<small>stała kwota na sztukę</small></label><span class="sin"><input id="ship" type="number" step="0.01" value="9"><i>€</i></span></div>
+      <div class="srow"><label for="extra">Dodatkowe koszty<small>np. opakowanie</small></label><span class="sin"><input id="extra" type="number" step="0.01" value="0"><i>€</i></span></div>
+    </div>
+    <div class="sgroup">
+      <h3>Przeliczenie na PLN</h3>
+      <div class="srow"><label for="rate">Kurs EUR/PLN<small>z wypłaty Amazon</small></label><span class="sin"><input id="rate" type="number" step="0.00000001" value="4.34575254"><i>zł</i></span></div>
+      <div class="srow"><label for="plVat">VAT polski<small>dolicza się do PLN netto → PLN brutto</small></label><span class="sin"><input id="plVat" type="number" step="0.1" value="23"><i>%</i></span></div>
+    </div>
     <p class="note" id="reset" style="cursor:pointer;text-decoration:underline;width:fit-content">Przywróć domyślne</p>
   </section>
 </div>
