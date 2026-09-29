@@ -176,6 +176,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
           <tr class="neg"><td>Dodatkowe koszty</td><td id="bExtra"></td></tr>
           <tr class="total"><td>Zostaje netto</td><td id="bNetEur"></td></tr>
           <tr class="pln"><td>w PLN (kurs <span id="lRate"></span>)</td><td id="bNetPln"></td></tr>
+          <tr class="info"><td>PLN brutto (+<span id="lPlVat"></span> VAT)</td><td id="bGrossPln"></td></tr>
         </tbody>
       </table>
     </div>
@@ -198,6 +199,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
       <div><label for="vat">VAT kraju %</label><input id="vat" type="number" step="0.1" value="19"></div>
       <div><label for="fee">Prowizja Amazon %</label><input id="fee" type="number" step="0.1" value="7"></div>
       <div><label for="feeVat">VAT od prowizji %</label><input id="feeVat" type="number" step="0.1" value="23"></div>
+      <div><label for="plVat">VAT PL (do PLN brutto) %</label><input id="plVat" type="number" step="0.1" value="23"></div>
       <div><label for="accs">ACCS %</label><input id="accs" type="number" step="0.1" value="1.5"></div>
       <div><label for="ship">Wysyłka EUR</label><input id="ship" type="number" step="0.01" value="9"></div>
       <div><label for="extra">Dodatkowe koszty EUR</label><input id="extra" type="number" step="0.01" value="0"></div>
@@ -210,8 +212,8 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
 <script>
 const $ = id => document.getElementById(id);
-const SET = ["vat","fee","feeVat","accs","ship","extra","rate"];
-const DEF = {vat:19,fee:7,feeVat:23,accs:1.5,ship:9,extra:0,rate:4.34575254};
+const SET = ["vat","fee","feeVat","accs","ship","extra","rate","plVat"];
+const DEF = {vat:19,fee:7,feeVat:23,accs:1.5,ship:9,extra:0,rate:4.34575254,plVat:23};
 const KEY = "amz-calc-v2";
 let mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross";
 
@@ -246,17 +248,17 @@ function breakdown(P, p){
   const afterFee = P - feeGross;
   const accs = afterFee * a;
   const afterAccs = afterFee - accs;
-  const inflowEur = afterAccs - p.ship - p.extra;   // wpływ przed rozliczeniem VAT
-  const netEur = inflowEur - vat + feeVat;
-  return {P, vat, netSale:P - vat, feeNet, feeVat, feeGross, afterFee, accs, afterAccs, netEur, netPln: netEur * p.rate, grossPln: inflowEur * p.rate};
+  const netEur = afterAccs - vat + feeVat - p.ship - p.extra;
+  const netPln = netEur * p.rate;
+  return {P, vat, netSale:P - vat, feeNet, feeVat, feeGross, afterFee, accs, afterAccs, netEur, netPln, grossPln: netPln * (1 + p.plVat/100)};
 }
-// Wynik jest liniowy względem ceny: kwota = k·P − stałe
-// netto: po rozliczeniu VAT; brutto: wpływ z Amazon po ACCS i kosztach, przed rozliczeniem VAT
+// Netto jest liniowe względem ceny: netto = k·P − stałe
+// brutto = netto + polski VAT, więc najpierw zdejmujemy VAT PL
 function priceFor(amountEur, p, basis){
   const t = p.vat/100, c = p.fee/100, v = p.feeVat/100, a = p.accs/100;
-  let k = (1 - c*(1+v))*(1 - a);
-  if (basis === "net") k += c*v - t/(1+t);
-  return (amountEur + p.ship + p.extra) / k;
+  const netEur = basis === "gross" ? amountEur / (1 + p.plVat/100) : amountEur;
+  const k = (1 - c*(1+v))*(1 - a) + c*v - t/(1+t);
+  return (netEur + p.ship + p.extra) / k;
 }
 
 function render(){
@@ -317,6 +319,8 @@ function render(){
   $("bExtra").textContent = "−" + eur(p.extra);
   $("bNetEur").textContent = eur(b.netEur);
   $("bNetPln").textContent = pln(b.netPln);
+  $("bGrossPln").textContent = pln(b.grossPln);
+  $("lPlVat").textContent = p.plVat + "%";
 
   const steps = [...new Set([30,50,75,100,150,200,300,500,Math.round(P*100)/100])].filter(x => x > 0).sort((x,y) => x - y);
   $("scale").innerHTML = steps.map(x => {
