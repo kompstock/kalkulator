@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kalkulator ceny Amazon</title>
+<title>Kalkulator Amazon i eBay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
@@ -39,6 +39,7 @@ label,.lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:up
 .tabs button{flex:1;font:inherit;font-weight:500;font-size:14px;border:0;border-radius:6px;padding:8px 10px;background:transparent;color:var(--muted);cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tabs.market button[aria-selected="true"]{background:var(--accent);color:var(--panel);font-weight:600;box-shadow:none}
 
 .field{position:relative;display:flex;gap:8px}
 .field input{flex:1;min-width:0;width:100%;font-family:var(--mono);font-size:28px;font-weight:600;padding:12px 64px 12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
@@ -54,7 +55,7 @@ input:focus,.cur button:focus-visible{outline:2px solid var(--accent);outline-of
 
 .result{background:var(--accent-soft);border-radius:8px;padding:16px;display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end}
 .result .big{font-family:var(--mono);font-size:38px;font-weight:600;color:var(--accent);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
-.result .pair{flex:1}
+.result .pair{flex:1;min-width:0}
 .trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 20px}
 .trio .big{font-size:28px}
 .trio .cap{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
@@ -94,6 +95,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 .srow:last-child{border-bottom:none}
 .srow label{font-size:14px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);margin:0}
 .srow label small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.srow label small.check{color:var(--warn);font-weight:500}
 .sin{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .sin input{width:120px;text-align:right;font-family:var(--mono);font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 .sin i{font-style:normal;font-family:var(--mono);color:var(--muted);width:18px}
@@ -101,14 +103,18 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 </style>
 </head>
 <body>
-
 <div class="wrap">
   <header>
-    <h1>Kalkulator ceny Amazon</h1>
-    <p class="sub">Amazon DE: ile realnie zostaje z ceny brutto po VAT, prowizji, ACCS i wysyłce — albo za ile wystawić, żeby dostać konkretną kwotę.</p>
+    <h1>Kalkulator ceny</h1>
+    <p class="sub" id="lead"></p>
   </header>
 
   <section class="panel">
+    <div class="tabs market" role="tablist">
+      <button id="mAmz" role="tab" aria-selected="true">Amazon DE</button>
+      <button id="mEbay" role="tab" aria-selected="false">eBay</button>
+    </div>
+
     <div class="tabs" role="tablist">
       <button id="tabFwd" role="tab" aria-selected="true">Mam cenę → ile zostaje</button>
       <button id="tabRev" role="tab" aria-selected="false">Chcę dostać → za ile wystawić</button>
@@ -153,8 +159,9 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
     <div class="result" id="resRev" hidden>
       <div>
-        <span class="lbl">Wystaw na Amazon za</span>
-        <div class="big" id="rPrice">–</div>      </div>
+        <span class="lbl" id="revLbl">Wystaw za</span>
+        <div class="big" id="rPrice">–</div>
+      </div>
     </div>
 
     <div>
@@ -171,14 +178,21 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
           <tr class="sub"><td>Cena sprzedaży brutto</td><td id="bGross"></td></tr>
           <tr class="info"><td>VAT sprzedażowy (<span id="lVat"></span>)</td><td id="bVatInfo"></td></tr>
           <tr class="info"><td>Wartość netto sprzedaży</td><td id="bNetSale"></td></tr>
-          <tr class="info"><td>Prowizja Amazon netto (<span id="lFee"></span> od brutto)</td><td id="bFeeNet"></td></tr>
-          <tr class="info"><td>VAT od prowizji (<span id="lFeeVat"></span>)</td><td id="bFeeVat"></td></tr>
-          <tr class="neg"><td>Prowizja Amazon brutto</td><td id="bFeeGross"></td></tr>
-          <tr class="sub"><td>Kwota po prowizji</td><td id="bAfterFee"></td></tr>
-          <tr class="neg"><td>ACCS (<span id="lAccs"></span>)</td><td id="bAccs"></td></tr>
-          <tr class="sub"><td>Kwota po ACCS</td><td id="bAfterAccs"></td></tr>
+
+          <tr class="info amz"><td>Prowizja Amazon netto (<span id="lFee"></span> od brutto)</td><td id="bFeeNet"></td></tr>
+          <tr class="info ebay" hidden><td>Prowizja od sprzedaży (<span id="lEfee"></span>)</td><td id="bEfee"></td></tr>
+          <tr class="info ebay" hidden><td>Promowanie ofert (<span id="lEpromo"></span>)</td><td id="bEpromo"></td></tr>
+          <tr class="info ebay" hidden><td>Opłata za wystawienie</td><td id="bEinsert"></td></tr>
+          <tr class="info"><td>VAT od opłat (<span id="lFeeVat"></span>)</td><td id="bFeeVat"></td></tr>
+          <tr class="neg"><td id="lFeeGrossRow">Opłaty brutto</td><td id="bFeeGross"></td></tr>
+          <tr class="sub"><td>Kwota po opłatach</td><td id="bAfterFee"></td></tr>
+
+          <tr class="neg amz"><td>ACCS (<span id="lAccs"></span>)</td><td id="bAccs"></td></tr>
+          <tr class="neg ebay" hidden><td>Przewalutowanie (<span id="lEconv"></span>)</td><td id="bEconv"></td></tr>
+          <tr class="sub"><td id="lAfterConvRow">Kwota po przewalutowaniu</td><td id="bAfterAccs"></td></tr>
+
           <tr class="neg"><td>VAT sprzedażowy do oddania</td><td id="bVat"></td></tr>
-          <tr class="pos"><td>Odzyskany VAT z prowizji</td><td id="bVatBack"></td></tr>
+          <tr class="pos"><td>Odzyskany VAT z opłat</td><td id="bVatBack"></td></tr>
           <tr class="neg"><td>Wysyłka</td><td id="bShip"></td></tr>
           <tr class="neg"><td>Dodatkowe koszty</td><td id="bExtra"></td></tr>
           <tr class="total"><td>Zostaje netto</td><td id="bNetEur"></td></tr>
@@ -203,15 +217,26 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
   <section class="panel">
     <h2>Ustawienia</h2>
     <div class="sgroup">
-      <h3>Sprzedaż w Niemczech</h3>
-      <div class="srow"><label for="vat">VAT niemiecki<small>odprowadzany od ceny sprzedaży</small></label><span class="sin"><input id="vat" type="number" step="0.1" value="19"><i>%</i></span></div>
+      <h3 id="hVat">Sprzedaż w Niemczech</h3>
+      <div class="srow"><label for="vat">VAT kraju sprzedaży<small id="sVat">odprowadzany od ceny sprzedaży</small></label><span class="sin"><input id="vat" type="number" step="0.1" value="19"><i>%</i></span></div>
     </div>
-    <div class="sgroup">
+
+    <div class="sgroup amz">
       <h3>Opłaty Amazon</h3>
       <div class="srow"><label for="fee">Prowizja<small>netto, liczona od ceny brutto</small></label><span class="sin"><input id="fee" type="number" step="0.1" value="7"><i>%</i></span></div>
       <div class="srow"><label for="feeVat">VAT od prowizji<small>doliczany przez Amazon, odzyskujesz go</small></label><span class="sin"><input id="feeVat" type="number" step="0.1" value="23"><i>%</i></span></div>
       <div class="srow"><label for="accs">ACCS — przewalutowanie<small>od kwoty po prowizji</small></label><span class="sin"><input id="accs" type="number" step="0.1" value="1.5"><i>%</i></span></div>
     </div>
+
+    <div class="sgroup ebay" hidden>
+      <h3>Opłaty eBay</h3>
+      <div class="srow"><label for="efee">Prowizja od sprzedaży<small class="check">sprawdź na swojej fakturze eBay — tej stawki nie da się odczytać z raportu transakcji</small></label><span class="sin"><input id="efee" type="number" step="0.1" value="11"><i>%</i></span></div>
+      <div class="srow"><label for="epromo">Promowanie ofert<small>wyliczone z Twoich transakcji: 5% na każdym zamówieniu</small></label><span class="sin"><input id="epromo" type="number" step="0.1" value="5"><i>%</i></span></div>
+      <div class="srow"><label for="einsert">Opłata za wystawienie<small>stała, z raportu transakcji</small></label><span class="sin"><input id="einsert" type="number" step="0.01" value="0.35"><i>€</i></span></div>
+      <div class="srow"><label for="efeeVat">VAT od opłat<small>przy odwrotnym obciążeniu zostaw 0</small></label><span class="sin"><input id="efeeVat" type="number" step="0.1" value="0"><i>%</i></span></div>
+      <div class="srow"><label for="econv">Przewalutowanie<small>spread eBaya przy wypłacie w PLN</small></label><span class="sin"><input id="econv" type="number" step="0.1" value="0"><i>%</i></span></div>
+    </div>
+
     <div class="sgroup">
       <h3>Twoje koszty</h3>
       <div class="srow"><label for="ship">Wysyłka<small>stała kwota na sztukę</small></label><span class="sin"><input id="ship" type="number" step="0.01" value="9"><i>€</i></span></div>
@@ -219,7 +244,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     </div>
     <div class="sgroup">
       <h3>Przeliczenie na PLN</h3>
-      <div class="srow"><label for="rate">Kurs EUR/PLN<small>z wypłaty Amazon</small></label><span class="sin"><input id="rate" type="number" step="0.00000001" value="4.34575254"><i>zł</i></span></div>
+      <div class="srow"><label for="rate">Kurs EUR/PLN<small id="sRate">z wypłaty Amazon</small></label><span class="sin"><input id="rate" type="number" step="0.00000001" value="4.34575254"><i>zł</i></span></div>
       <div class="srow"><label for="plVat">VAT polski<small>dolicza się do PLN netto → PLN brutto</small></label><span class="sin"><input id="plVat" type="number" step="0.1" value="23"><i>%</i></span></div>
     </div>
     <p class="note" id="reset" style="cursor:pointer;text-decoration:underline;width:fit-content">Przywróć domyślne</p>
@@ -228,10 +253,15 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
 <script>
 const $ = id => document.getElementById(id);
-const SET = ["vat","fee","feeVat","accs","ship","extra","rate","plVat"];
-const DEF = {vat:19,fee:7,feeVat:23,accs:1.5,ship:9,extra:0,rate:4.34575254,plVat:23};
-const KEY = "amz-calc-v2";
-let mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross";
+const WSPOLNE = ["vat","ship","extra","rate","plVat"];
+const AMZ = ["fee","feeVat","accs"];
+const EBAY = ["efee","epromo","einsert","efeeVat","econv"];
+const SET = [...WSPOLNE, ...AMZ, ...EBAY];
+const DEF = {vat:19, ship:9, extra:0, rate:4.34575254, plVat:23,
+             fee:7, feeVat:23, accs:1.5,
+             efee:11, epromo:5, einsert:0.35, efeeVat:0, econv:0};
+const KEY = "amz-calc-v3";
+let rynek = "amazon", mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross";
 
 const fmt = n => n.toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2});
 const eur = n => fmt(n) + " €";
@@ -243,10 +273,11 @@ function load(){
     const s = JSON.parse(localStorage.getItem(KEY) || "{}");
     SET.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
     if (s.mode) mode = s.mode;
+    if (s.rynek) rynek = s.rynek;
   }catch(e){}
 }
 function save(p){
-  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode, rynek})); }catch(e){}
 }
 function params(){
   const p = {};
@@ -254,32 +285,72 @@ function params(){
   return p;
 }
 
-// Pełne rozliczenie dla ceny brutto P
+// Oba rynki maja ten sam ksztalt: cena brutto minus oplaty, minus przewalutowanie,
+// minus VAT sprzedazowy, plus odzyskany VAT z oplat, minus wlasne koszty.
+// Rozni je tylko to, z czego sklada sie podstawa oplat.
 function breakdown(P, p){
-  const t = p.vat/100, c = p.fee/100, v = p.feeVat/100, a = p.accs/100;
+  const t = p.vat/100;
   const vat = P * t / (1 + t);
-  const feeNet = P * c;
-  const feeVat = feeNet * v;
-  const feeGross = feeNet + feeVat;
+  let feeBase, feeVatRate, convRate, czesci;
+  if (rynek === "amazon"){
+    feeBase = P * p.fee/100;
+    feeVatRate = p.feeVat/100;
+    convRate = p.accs/100;
+    czesci = {feeNet: feeBase};
+  } else {
+    const fvf = P * p.efee/100, promo = P * p.epromo/100, insert = p.einsert;
+    feeBase = fvf + promo + insert;
+    feeVatRate = p.efeeVat/100;
+    convRate = p.econv/100;
+    czesci = {fvf, promo, insert};
+  }
+  const feeVat = feeBase * feeVatRate;
+  const feeGross = feeBase + feeVat;
   const afterFee = P - feeGross;
-  const accs = afterFee * a;
-  const afterAccs = afterFee - accs;
-  const netEur = afterAccs - vat + feeVat - p.ship - p.extra;
+  const conv = afterFee * convRate;
+  const afterConv = afterFee - conv;
+  const netEur = afterConv - vat + feeVat - p.ship - p.extra;
   const netPln = netEur * p.rate;
-  return {P, vat, netSale:P - vat, feeNet, feeVat, feeGross, afterFee, accs, afterAccs, netEur, netPln, grossPln: netPln * (1 + p.plVat/100)};
+  return {P, vat, netSale: P - vat, feeBase, feeVat, feeGross, afterFee, conv,
+          afterConv, netEur, netPln, grossPln: netPln * (1 + p.plVat/100), ...czesci};
 }
-// Netto jest liniowe względem ceny: netto = k·P − stałe
-// brutto = netto + polski VAT, więc najpierw zdejmujemy VAT PL
+
+// Netto jest liniowe wzgledem ceny: netto = k·P + stala.
+// Stala bierze sie z oplaty za wystawienie, ktora nie zalezy od ceny.
 function priceFor(amountEur, p, basis){
-  const t = p.vat/100, c = p.fee/100, v = p.feeVat/100, a = p.accs/100;
+  const t = p.vat/100;
   const netEur = basis === "gross" ? amountEur / (1 + p.plVat/100) : amountEur;
-  const k = (1 - c*(1+v))*(1 - a) + c*v - t/(1+t);
-  return (netEur + p.ship + p.extra) / k;
+  let A, v, cv, F;
+  if (rynek === "amazon"){
+    A = p.fee/100; v = p.feeVat/100; cv = p.accs/100; F = 0;
+  } else {
+    A = (p.efee + p.epromo)/100; v = p.efeeVat/100; cv = p.econv/100; F = p.einsert;
+  }
+  const k = (1 - cv) - (1 - cv)*(1 + v)*A - t/(1 + t) + v*A;
+  const stala = F * (v - (1 - cv)*(1 + v));
+  return k ? (netEur - stala + p.ship + p.extra) / k : 0;
 }
 
 function render(){
   const p = params();
   save(p);
+  const ama = rynek === "amazon";
+
+  $("mAmz").setAttribute("aria-selected", ama);
+  $("mEbay").setAttribute("aria-selected", !ama);
+  document.querySelectorAll(".amz").forEach(el => el.hidden = !ama);
+  document.querySelectorAll(".ebay").forEach(el => el.hidden = ama);
+
+  $("lead").textContent = ama
+    ? "Amazon DE: ile realnie zostaje z ceny brutto po VAT, prowizji, ACCS i wysyłce — albo za ile wystawić, żeby dostać konkretną kwotę."
+    : "eBay: ile realnie zostaje z ceny brutto po VAT, prowizji, promowaniu ofert i wysyłce — albo za ile wystawić, żeby dostać konkretną kwotę.";
+  $("revLbl").textContent = ama ? "Wystaw na Amazon za" : "Wystaw na eBay za";
+  $("lFeeGrossRow").textContent = ama ? "Prowizja Amazon brutto" : "Opłaty eBay razem";
+  $("lAfterConvRow").textContent = ama ? "Kwota po ACCS" : "Kwota po przewalutowaniu";
+  $("hVat").textContent = ama ? "Sprzedaż w Niemczech" : "Sprzedaż na rynku docelowym";
+  $("sVat").textContent = ama ? "odprowadzany od ceny sprzedaży"
+                              : "Niemcy 19%, Włochy 22%, Hiszpania 21%";
+  $("sRate").textContent = ama ? "z wypłaty Amazon" : "z wypłaty eBay albo kurs NBP";
 
   $("tabFwd").setAttribute("aria-selected", mode === "fwd");
   $("tabRev").setAttribute("aria-selected", mode === "rev");
@@ -315,20 +386,31 @@ function render(){
   $("mKeep").style.width = Math.max(0, Math.min(100, keep*100)) + "%";
 
   $("lVat").textContent = p.vat + "%";
-  $("lFee").textContent = p.fee + "%";
-  $("lFeeVat").textContent = p.feeVat + "%";
-  $("lAccs").textContent = p.accs + "%";
+  $("lFeeVat").textContent = (ama ? p.feeVat : p.efeeVat) + "%";
   $("lRate").textContent = p.rate.toLocaleString("pl-PL",{maximumFractionDigits:8});
+  $("lPlVat").textContent = p.plVat + "%";
+  if (ama){
+    $("lFee").textContent = p.fee + "%";
+    $("lAccs").textContent = p.accs + "%";
+    $("bFeeNet").textContent = eur(b.feeNet);
+    $("bAccs").textContent = "−" + eur(b.conv);
+  } else {
+    $("lEfee").textContent = p.efee + "%";
+    $("lEpromo").textContent = p.epromo + "%";
+    $("lEconv").textContent = p.econv + "%";
+    $("bEfee").textContent = eur(b.fvf);
+    $("bEpromo").textContent = eur(b.promo);
+    $("bEinsert").textContent = eur(b.insert);
+    $("bEconv").textContent = "−" + eur(b.conv);
+  }
 
   $("bGross").textContent = eur(b.P);
   $("bVatInfo").textContent = eur(b.vat);
   $("bNetSale").textContent = eur(b.netSale);
-  $("bFeeNet").textContent = eur(b.feeNet);
   $("bFeeVat").textContent = eur(b.feeVat);
   $("bFeeGross").textContent = "−" + eur(b.feeGross);
   $("bAfterFee").textContent = eur(b.afterFee);
-  $("bAccs").textContent = "−" + eur(b.accs);
-  $("bAfterAccs").textContent = eur(b.afterAccs);
+  $("bAfterAccs").textContent = eur(b.afterConv);
   $("bVat").textContent = "−" + eur(b.vat);
   $("bVatBack").textContent = "+" + eur(b.feeVat);
   $("bShip").textContent = "−" + eur(p.ship);
@@ -336,7 +418,6 @@ function render(){
   $("bNetEur").textContent = eur(b.netEur);
   $("bNetPln").textContent = pln(b.netPln);
   $("bGrossPln").textContent = pln(b.grossPln);
-  $("lPlVat").textContent = p.plVat + "%";
 
   const steps = [...new Set([30,50,75,100,150,200,300,500,Math.round(P*100)/100])].filter(x => x > 0).sort((x,y) => x - y);
   $("scale").innerHTML = steps.map(x => {
@@ -345,6 +426,8 @@ function render(){
   }).join("");
 }
 
+$("mAmz").onclick = () => { rynek = "amazon"; render(); };
+$("mEbay").onclick = () => { rynek = "ebay"; render(); };
 $("tabFwd").onclick = () => { mode = "fwd"; render(); };
 $("tabRev").onclick = () => { mode = "rev"; render(); };
 $("curEur").onclick = () => { cur = "EUR"; render(); };
