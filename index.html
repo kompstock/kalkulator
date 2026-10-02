@@ -181,7 +181,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
           <tr class="info amz"><td>Prowizja Amazon netto (<span id="lFee"></span> od brutto)</td><td id="bFeeNet"></td></tr>
           <tr class="info ebay" hidden><td>Prowizja od sprzedaży (<span id="lEfee"></span>)</td><td id="bEfee"></td></tr>
-          <tr class="info ebay" hidden><td>Promowanie ofert (<span id="lEpromo"></span>)</td><td id="bEpromo"></td></tr>
+          <tr class="info ebay" hidden><td>Promowanie ofert ADS (<span id="lEpromo"></span>)</td><td id="bEpromo"></td></tr>
           <tr class="info ebay" hidden><td>Opłata za wystawienie</td><td id="bEinsert"></td></tr>
           <tr class="info"><td>VAT od opłat (<span id="lFeeVat"></span>)</td><td id="bFeeVat"></td></tr>
           <tr class="neg"><td id="lFeeGrossRow">Opłaty brutto</td><td id="bFeeGross"></td></tr>
@@ -230,9 +230,9 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
     <div class="sgroup ebay" hidden>
       <h3>Opłaty eBay</h3>
-      <div class="srow"><label for="efee">Prowizja od sprzedaży<small class="check">sprawdź na swojej fakturze eBay — tej stawki nie da się odczytać z raportu transakcji</small></label><span class="sin"><input id="efee" type="number" step="0.1" value="11"><i>%</i></span></div>
-      <div class="srow"><label for="epromo">Promowanie ofert<small>wyliczone z Twoich transakcji: 5% na każdym zamówieniu</small></label><span class="sin"><input id="epromo" type="number" step="0.1" value="5"><i>%</i></span></div>
-      <div class="srow"><label for="einsert">Opłata za wystawienie<small>stała, z raportu transakcji</small></label><span class="sin"><input id="einsert" type="number" step="0.01" value="0.35"><i>€</i></span></div>
+      <div class="srow"><label for="efee">Prowizja od sprzedaży<small>od ceny brutto</small></label><span class="sin"><input id="efee" type="number" step="0.1" value="5"><i>%</i></span></div>
+      <div class="srow"><label for="epromo">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu</small></label><span class="sin"><input id="epromo" type="number" step="0.1" value="5"><i>%</i></span></div>
+      <div class="srow"><label for="einsert">Opłata za wystawienie<small>stała kwota od oferty</small></label><span class="sin"><input id="einsert" type="number" step="0.01" value="0"><i>€</i></span></div>
       <div class="srow"><label for="efeeVat">VAT od opłat<small>przy odwrotnym obciążeniu zostaw 0</small></label><span class="sin"><input id="efeeVat" type="number" step="0.1" value="0"><i>%</i></span></div>
       <div class="srow"><label for="econv">Przewalutowanie<small>spread eBaya przy wypłacie w PLN</small></label><span class="sin"><input id="econv" type="number" step="0.1" value="0"><i>%</i></span></div>
     </div>
@@ -259,7 +259,7 @@ const EBAY = ["efee","epromo","einsert","efeeVat","econv"];
 const SET = [...WSPOLNE, ...AMZ, ...EBAY];
 const DEF = {vat:19, ship:9, extra:0, rate:4.34575254, plVat:23,
              fee:7, feeVat:23, accs:1.5,
-             efee:11, epromo:5, einsert:0.35, efeeVat:0, econv:0};
+             efee:5, epromo:5, einsert:0, efeeVat:0, econv:0};
 const KEY = "amz-calc-v3";
 let rynek = "amazon", mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross";
 
