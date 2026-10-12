@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kalkulator eBay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#f3f5f4; --panel:#ffffff; --ink:#15201c; --muted:#5d6b66; --line:#d9e0dd;
+  --accent:#0f7a5a; --accent-soft:#e2f2ec; --warn:#b4541a; --plus:#1f6fb2;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0f1513; --panel:#17201d; --ink:#e6eeeb; --muted:#94a39e; --line:#2a3632;
+    --accent:#4fcf9f; --accent-soft:#1b3129; --warn:#f0a06a; --plus:#7db8ec;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1513; --panel:#17201d; --ink:#e6eeeb; --muted:#94a39e; --line:#2a3632;
+  --accent:#4fcf9f; --accent-soft:#1b3129; --warn:#f0a06a; --plus:#7db8ec;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;padding-block:32px;padding-inline:16px}
+.wrap{max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:22px;font-weight:600;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;font-size:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:16px}
+h2{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
+label,.lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+.inny{font-size:13px;color:var(--muted);margin:0}
+.inny a{color:var(--accent);font-weight:600}
+
+.tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px}
+.tabs button{flex:1;font:inherit;font-weight:500;font-size:14px;border:0;border-radius:6px;padding:8px 10px;background:transparent;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.field{position:relative;display:flex;gap:8px}
+.field input{flex:1;min-width:0;width:100%;font-family:var(--mono);font-size:28px;font-weight:600;padding:12px 64px 12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.field .unit{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-family:var(--mono);color:var(--muted);font-weight:500;pointer-events:none}
+.field.has-cur .unit{display:none}
+.field.has-cur{flex-wrap:wrap}
+.field.has-cur input{padding-right:14px;flex-basis:160px}
+.field.has-cur .cur{min-height:52px}
+.cur{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.cur button{font-family:var(--mono);font-weight:600;border:0;padding:0 14px;background:var(--bg);color:var(--muted);cursor:pointer}
+.cur button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+input:focus,.cur button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.result{background:var(--accent-soft);border-radius:8px;padding:16px;display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end}
+.result .big{font-family:var(--mono);font-size:38px;font-weight:600;color:var(--accent);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.result .pair{flex:1;min-width:0}
+.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 20px}
+.trio .big{font-size:28px}
+.trio .cap{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+
+.meter{height:10px;border-radius:5px;background:var(--warn);overflow:hidden;display:flex}
+.meter span{background:var(--accent);height:100%}
+.meter-lbl{display:flex;justify-content:space-between;font-size:13px;margin-top:6px;font-variant-numeric:tabular-nums}
+.meter-lbl .k{color:var(--accent);font-weight:600}
+.meter-lbl .c{color:var(--warn);font-weight:600}
+
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+td,th{padding:7px 0;border-bottom:1px solid var(--line);text-align:left;font-weight:400}
+td:last-child,th:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;padding-left:12px}
+tr.info td{color:var(--muted);font-size:14px}
+tr.info td:first-child{padding-left:14px}
+tr.sub td{font-weight:500;background:var(--bg)}
+tr.sub td:first-child{padding-left:8px}
+tr.sub td:last-child{padding-right:8px}
+tr.neg td:last-child{color:var(--warn)}
+tr.total td{font-weight:600;border-bottom:none;padding-top:12px}
+tr.total td:last-child{color:var(--accent)}
+tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
+
+.scale th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.scale td,.scale th{text-align:right;font-family:var(--mono);padding-left:10px}
+.scale td:first-child,.scale th:first-child{text-align:left;padding-left:0}
+.scale tr.hl td{color:var(--accent);font-weight:600}
+.scale td.plus{color:var(--plus)} .scale td.minus{color:var(--warn)}
+
+.sgroup{display:flex;flex-direction:column}
+.sgroup h3{font-size:13px;font-weight:600;margin:0 0 4px;color:var(--ink)}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:none}
+.srow label{font-size:14px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);margin:0}
+.srow label small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.sin{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.sin input{width:120px;text-align:right;font-family:var(--mono);font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.sin i{font-style:normal;font-family:var(--mono);color:var(--muted);width:18px}
+.note{font-size:12px;color:var(--muted);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Kalkulator eBay</h1>
+    <p class="sub">Ta sama arytmetyka, co w generatorze ofert: wycena przy VAT 23%, prowizja, promowanie ofert i wysyłka.</p>
+    <p class="inny">Sprzedajesz na Amazonie? <a href="https://kompstock.github.io/kalkulator/">Kalkulator Amazon</a></p>
+  </header>
+
+  <section class="panel">
+    <div class="tabs" role="tablist">
+      <button id="tabFwd" role="tab" aria-selected="true">Mam cenę → ile zostaje</button>
+      <button id="tabRev" role="tab" aria-selected="false">Chcę dostać → za ile wystawić</button>
+    </div>
+
+    <div>
+      <label for="gw" style="margin-bottom:8px">Wariant</label>
+      <div class="cur" style="width:fit-content">
+        <button id="gwNie" aria-pressed="true">zwykły — ADS 5%</button>
+        <button id="gwTak" aria-pressed="false">GW24 — ADS 10%</button>
+      </div>
+    </div>
+
+    <div id="fwdBox">
+      <label for="price">Cena na eBayu (EUR brutto)</label>
+      <div class="field">
+        <input id="price" type="number" inputmode="decimal" min="0" step="0.01" value="377">
+        <span class="unit">€</span>
+      </div>
+    </div>
+
+    <div id="revBox" hidden>
+      <label for="target">Chcę dostać</label>
+      <div class="field has-cur">
+        <input id="target" type="number" inputmode="decimal" min="0" step="0.01" value="1499">
+        <div class="cur">
+          <button id="basGross" aria-pressed="true">cena z feedu</button>
+          <button id="basNet" aria-pressed="false">netto</button>
+        </div>
+        <div class="cur">
+          <button id="curEur" aria-pressed="false">EUR</button>
+          <button id="curPln" aria-pressed="true">PLN</button>
+        </div>
+      </div>
+      <p class="note" style="margin-top:8px">„Cena z feedu" to kwota brutto z kompre.pl — kalkulator sam zdejmie z niej polski VAT, tak jak robi to generator.</p>
+    </div>
+
+    <div class="result" id="resFwd">
+      <div class="pair">
+        <span class="lbl">Na koncie</span>
+        <div class="trio">
+          <div><div class="big" id="rNetEur">–</div><div class="cap">EUR netto</div></div>
+          <div><div class="big" id="rNetPln">–</div><div class="cap">PLN netto</div></div>
+          <div><div class="big" id="rGrossPln">–</div><div class="cap">PLN brutto</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result" id="resRev" hidden>
+      <div>
+        <span class="lbl">Wystaw na eBay za</span>
+        <div class="big" id="rPrice">–</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="meter"><span id="mKeep"></span></div>
+      <div class="meter-lbl"><span>Zostaje <span class="k" id="pKeep">–</span></span><span>Koszty <span class="c" id="pCost">–</span></span></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Rozbicie kosztów</h2>
+    <div class="tbl">
+      <table>
+        <tbody>
+          <tr class="sub"><td>Cena na eBayu brutto</td><td id="bGross"></td></tr>
+          <tr class="info"><td>VAT (<span id="lVat"></span>)</td><td id="bVatInfo"></td></tr>
+          <tr class="info"><td>Wartość netto sprzedaży</td><td id="bNetSale"></td></tr>
+          <tr class="info"><td>Prowizja od sprzedaży (<span id="lFee"></span>)</td><td id="bFee"></td></tr>
+          <tr class="info"><td>Promowanie ofert ADS (<span id="lAds"></span>)</td><td id="bAds"></td></tr>
+          <tr class="neg"><td>Opłaty eBay razem</td><td id="bFeeGross"></td></tr>
+          <tr class="sub"><td>Kwota po opłatach</td><td id="bAfterFee"></td></tr>
+          <tr class="neg"><td>VAT do oddania</td><td id="bVat"></td></tr>
+          <tr class="neg"><td>Wysyłka</td><td id="bShip"></td></tr>
+          <tr class="neg"><td>Dodatkowe koszty</td><td id="bExtra"></td></tr>
+          <tr class="total"><td>Zostaje netto</td><td id="bNetEur"></td></tr>
+          <tr class="pln"><td>w PLN (kurs <span id="lRate"></span>)</td><td id="bNetPln"></td></tr>
+          <tr class="info"><td>PLN brutto (+<span id="lPlVat"></span> VAT)</td><td id="bGrossPln"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Ile zostaje zależnie od kraju kupującego</h2>
+    <div class="tbl">
+      <table class="scale">
+        <thead><tr><th>Kraj</th><th>VAT</th><th>Zostaje EUR</th><th>Zostaje PLN</th><th>vs wycena</th></tr></thead>
+        <tbody id="kraje"></tbody>
+      </table>
+    </div>
+    <p class="note">Oferta ma jedną cenę, a VAT zależy od kraju kupującego. Generator wycenia przy 23% — rynki poniżej tej stawki dają nadwyżkę, powyżej niedobór.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Ustawienia</h2>
+    <div class="sgroup">
+      <h3>Założenie cenowe</h3>
+      <div class="srow"><label for="vat">VAT przyjęty do wyceny<small>oferta ma jedną cenę, a VAT zależy od kraju kupującego (19–27%). Generator przyjmuje 23%</small></label><span class="sin"><input id="vat" type="number" step="0.1" value="23"><i>%</i></span></div>
+    </div>
+    <div class="sgroup">
+      <h3>Opłaty eBay</h3>
+      <div class="srow"><label for="fee">Prowizja od sprzedaży<small>w wypłatach zamówienia mają opłaty 0 € — ustaw, gdy skończy się pakiet powitalny</small></label><span class="sin"><input id="fee" type="number" step="0.1" value="0"><i>%</i></span></div>
+      <div class="srow"><label for="ads">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu. Wariant GW24 płaci podwójnie</small></label><span class="sin"><input id="ads" type="number" step="0.1" value="5"><i>%</i></span></div>
+    </div>
+    <div class="sgroup">
+      <h3>Twoje koszty</h3>
+      <div class="srow"><label for="ship">Wysyłka<small>netto, stała kwota na sztukę</small></label><span class="sin"><input id="ship" type="number" step="0.01" value="9"><i>€</i></span></div>
+      <div class="srow"><label for="extra">Dodatkowe koszty<small>np. opakowanie</small></label><span class="sin"><input id="extra" type="number" step="0.01" value="0"><i>€</i></span></div>
+    </div>
+    <div class="sgroup">
+      <h3>Przeliczenie na PLN</h3>
+      <div class="srow"><label for="rate">Kurs EUR/PLN<small>NBP, ten sam co w generatorze</small></label><span class="sin"><input id="rate" type="number" step="0.0001" value="4.3775"><i>zł</i></span></div>
+      <div class="srow"><label for="plVat">VAT polski<small>zdejmowany z ceny z feedu i doliczany do PLN netto</small></label><span class="sin"><input id="plVat" type="number" step="0.1" value="23"><i>%</i></span></div>
+    </div>
+    <p class="note" id="reset" style="cursor:pointer;text-decoration:underline;width:fit-content">Przywróć domyślne</p>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const SET = ["vat","fee","ads","ship","extra","rate","plVat"];
+const DEF = {vat:23, fee:0, ads:5, ship:9, extra:0, rate:4.3775, plVat:23};
+const KEY = "ebay-calc-v1";
+let mode = "fwd", cur = "PLN", basis = "gross", gw24 = false;
+
+const fmt = n => n.toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2});
+const eur = n => fmt(n) + " €";
+const pln = n => fmt(n) + " zł";
+const pct = n => (n*100).toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2}) + "%";
+
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY) || "{}");
+    SET.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
+    if (s.mode) mode = s.mode;
+    if (s.gw24 != null) gw24 = s.gw24;
+  }catch(e){}
+}
+function save(p){
+  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode, gw24})); }catch(e){}
+}
+function params(){
+  const p = {};
+  SET.forEach(k => p[k] = parseFloat($(k).value) || 0);
+  return p;
+}
+// Wariant gwarancyjny placi podwojna stawke promowania - tak samo jak profile
+// GW24 w generatorze.
+const adsRate = p => gw24 ? p.ads * 2 : p.ads;
+const oplaty = p => (p.fee + adsRate(p)) / 100;
+
+// Ile zostaje z ceny brutto P, gdy kupujacy ma stawke 'vat'
+function zostaje(P, p, vat){
+  return P / (1 + vat/100) - P * oplaty(p) - p.ship - p.extra;
+}
+function breakdown(P, p){
+  const vat = P * (p.vat/100) / (1 + p.vat/100);
+  const fee = P * p.fee/100;
+  const ads = P * adsRate(p)/100;
+  const netEur = zostaje(P, p, p.vat);
+  const netPln = netEur * p.rate;
+  return {P, vat, netSale: P - vat, fee, ads, feeGross: fee + ads,
+          afterFee: P - fee - ads, netEur, netPln,
+          grossPln: netPln * (1 + p.plVat/100)};
+}
+// Cena liczona od konca, dokladnie jak cena_eur() w generatorze:
+//   cena = (cel netto + wysylka) / (1/(1+VAT) - oplaty)
+function priceFor(amountEur, p, basis){
+  // "cena z feedu" jest brutto z polskim VAT - zdejmujemy go, tak jak generator
+  let cel = basis === "gross" ? amountEur / (1 + p.plVat/100) : amountEur;
+  if (gw24) cel *= 1.2;              // blizniak ma zarobic 1,2 raza tyle
+  const m = 1/(1 + p.vat/100) - oplaty(p);
+  return m > 0 ? (cel + p.ship + p.extra) / m : 0;
+}
+
+const KRAJE = [["Niemcy",19],["Austria",20],["Francja",20],["Hiszpania",21],
+               ["Włochy",22],["Portugalia",23],["Grecja",24],["Szwecja",25],["Węgry",27]];
+
+function render(){
+  const p = params();
+  save(p);
+
+  $("tabFwd").setAttribute("aria-selected", mode === "fwd");
+  $("tabRev").setAttribute("aria-selected", mode === "rev");
+  $("fwdBox").hidden = $("resFwd").hidden = mode !== "fwd";
+  $("revBox").hidden = $("resRev").hidden = mode !== "rev";
+  $("curEur").setAttribute("aria-pressed", cur === "EUR");
+  $("curPln").setAttribute("aria-pressed", cur === "PLN");
+  $("basNet").setAttribute("aria-pressed", basis === "net");
+  $("basGross").setAttribute("aria-pressed", basis === "gross");
+  $("gwNie").setAttribute("aria-pressed", !gw24);
+  $("gwTak").setAttribute("aria-pressed", gw24);
+
+  let P;
+  if (mode === "fwd"){
+    P = parseFloat($("price").value) || 0;
+  } else {
+    const t = parseFloat($("target").value) || 0;
+    const amountEur = cur === "PLN" ? (p.rate ? t / p.rate : 0) : t;
+    P = Math.max(0, Math.ceil(priceFor(amountEur, p, basis) - 1e-9));
+    $("rPrice").textContent = P.toLocaleString("pl-PL") + " €";
+  }
+
+  const b = breakdown(P, p);
+  const keep = P ? b.netEur / P : 0;
+
+  $("rNetEur").textContent = eur(b.netEur);
+  $("rNetPln").textContent = pln(b.netPln);
+  $("rGrossPln").textContent = pln(b.grossPln);
+  $("pKeep").textContent = pct(keep);
+  $("pCost").textContent = pct(1 - keep);
+  $("mKeep").style.width = Math.max(0, Math.min(100, keep*100)) + "%";
+
+  $("lVat").textContent = p.vat + "%";
+  $("lFee").textContent = p.fee + "%";
+  $("lAds").textContent = adsRate(p) + "%";
+  $("lPlVat").textContent = p.plVat + "%";
+  $("lRate").textContent = p.rate.toLocaleString("pl-PL",{maximumFractionDigits:8});
+
+  $("bGross").textContent = eur(b.P);
+  $("bVatInfo").textContent = eur(b.vat);
+  $("bNetSale").textContent = eur(b.netSale);
+  $("bFee").textContent = eur(b.fee);
+  $("bAds").textContent = eur(b.ads);
+  $("bFeeGross").textContent = "−" + eur(b.feeGross);
+  $("bAfterFee").textContent = eur(b.afterFee);
+  $("bVat").textContent = "−" + eur(b.vat);
+  $("bShip").textContent = "−" + eur(p.ship);
+  $("bExtra").textContent = "−" + eur(p.extra);
+  $("bNetEur").textContent = eur(b.netEur);
+  $("bNetPln").textContent = pln(b.netPln);
+  $("bGrossPln").textContent = pln(b.grossPln);
+
+  const cel = zostaje(P, p, p.vat);
+  $("kraje").innerHTML = KRAJE.map(([k, v]) => {
+    const z = zostaje(P, p, v), d = z - cel;
+    const klasa = d > 0.005 ? "plus" : d < -0.005 ? "minus" : "";
+    return `<tr${v === p.vat ? ' class="hl"' : ""}><td>${k}</td><td>${v}%</td>` +
+           `<td>${eur(z)}</td><td>${pln(z * p.rate)}</td>` +
+           `<td class="${klasa}">${d >= 0 ? "+" : "−"}${eur(Math.abs(d))}</td></tr>`;
+  }).join("");
+}
+
+$("tabFwd").onclick = () => { mode = "fwd"; render(); };
+$("tabRev").onclick = () => { mode = "rev"; render(); };
+$("curEur").onclick = () => { cur = "EUR"; render(); };
+$("curPln").onclick = () => { cur = "PLN"; render(); };
+$("basNet").onclick = () => { basis = "net"; render(); };
+$("basGross").onclick = () => { basis = "gross"; render(); };
+$("gwNie").onclick = () => { gw24 = false; render(); };
+$("gwTak").onclick = () => { gw24 = true; render(); };
+$("reset").onclick = () => { SET.forEach(k => $(k).value = DEF[k]); render(); };
+["price","target",...SET].forEach(k => $(k).addEventListener("input", render));
+
+load();
+render();
+</script>
+</body>
+</html>
