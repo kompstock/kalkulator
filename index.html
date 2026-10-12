@@ -203,6 +203,17 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     </div>
   </section>
 
+  <section class="panel ebay" hidden>
+    <h2>Ile zostaje zależnie od kraju kupującego</h2>
+    <div class="tbl">
+      <table class="scale">
+        <thead><tr><th>Kraj</th><th>VAT</th><th>Zostaje EUR</th><th>Zostaje PLN</th><th>vs cel</th></tr></thead>
+        <tbody id="kraje"></tbody>
+      </table>
+    </div>
+    <p class="note">Oferta ma jedną cenę, a VAT zależy od kraju kupującego. Generator wycenia przy założeniu <b>23%</b> — rynki poniżej tej stawki dają nadwyżkę, powyżej niedobór.</p>
+  </section>
+
   <section class="panel">
     <h2>Jak cena zmienia udział kosztów</h2>
     <div class="tbl">
@@ -218,7 +229,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     <h2>Ustawienia</h2>
     <div class="sgroup">
       <h3 id="hVat">Sprzedaż w Niemczech</h3>
-      <div class="srow"><label for="vat">VAT kraju sprzedaży<small id="sVat">odprowadzany od ceny sprzedaży</small></label><span class="sin"><input id="vat" type="number" step="0.1" value="19"><i>%</i></span></div>
+      <div class="srow"><label for="vat">VAT kraju sprzedaży<small id="sVat">odprowadzany od ceny sprzedaży</small></label><span class="sin"><input id="vat" type="number" step="0.1" value="23"><i>%</i></span></div>
     </div>
 
     <div class="sgroup amz">
@@ -233,6 +244,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
       <div class="srow"><label for="efee">Prowizja od sprzedaży<small>w wypłatach zamówienia mają opłaty 0 € — ustaw, jeśli faktura pokaże inaczej</small></label><span class="sin"><input id="efee" type="number" step="0.1" value="0"><i>%</i></span></div>
       <div class="srow"><label for="epromo">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu</small></label><span class="sin"><input id="epromo" type="number" step="0.1" value="5"><i>%</i></span></div>
       <div class="srow"><label for="einsert">Opłata za wystawienie<small>stała kwota od oferty</small></label><span class="sin"><input id="einsert" type="number" step="0.01" value="0"><i>€</i></span></div>
+      <div class="srow"><label for="gw24">Wariant GW24<small>24 mies. gwarancji: ADS 10% zamiast 5%, a cel netto ×1,2</small></label><span class="sin"><span class="cur"><button id="gwNie" aria-pressed="true">zwykły</button><button id="gwTak" aria-pressed="false">GW24</button></span></span></div>
       <div class="srow"><label for="efeeVat">VAT od opłat<small>przy odwrotnym obciążeniu zostaw 0</small></label><span class="sin"><input id="efeeVat" type="number" step="0.1" value="0"><i>%</i></span></div>
       <div class="srow"><label for="econv">Przewalutowanie<small>spread eBaya przy wypłacie w PLN</small></label><span class="sin"><input id="econv" type="number" step="0.1" value="0"><i>%</i></span></div>
     </div>
@@ -257,11 +269,11 @@ const WSPOLNE = ["vat","ship","extra","rate","plVat"];
 const AMZ = ["fee","feeVat","accs"];
 const EBAY = ["efee","epromo","einsert","efeeVat","econv"];
 const SET = [...WSPOLNE, ...AMZ, ...EBAY];
-const DEF = {vat:19, ship:9, extra:0, rate:4.34575254, plVat:23,
+const DEF = {vat:23, ship:9, extra:0, rate:4.34575254, plVat:23,
              fee:7, feeVat:23, accs:1.5,
              efee:0, epromo:5, einsert:0, efeeVat:0, econv:0};
 const KEY = "amz-calc-v3";
-let rynek = "amazon", mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross";
+let rynek = "amazon", mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross", gw24 = false;
 
 const fmt = n => n.toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2});
 const eur = n => fmt(n) + " €";
@@ -274,10 +286,11 @@ function load(){
     SET.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
     if (s.mode) mode = s.mode;
     if (s.rynek) rynek = s.rynek;
+    if (s.gw24 != null) gw24 = s.gw24;
   }catch(e){}
 }
 function save(p){
-  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode, rynek})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode, rynek, gw24})); }catch(e){}
 }
 function params(){
   const p = {};
@@ -298,7 +311,9 @@ function breakdown(P, p){
     convRate = p.accs/100;
     czesci = {feeNet: feeBase};
   } else {
-    const fvf = P * p.efee/100, promo = P * p.epromo/100, insert = p.einsert;
+    // GW24 ma wlasna stawke promowania - tak samo jak w generatorze
+    const ads = gw24 ? p.epromo * 2 : p.epromo;
+    const fvf = P * p.efee/100, promo = P * ads/100, insert = p.einsert;
     feeBase = fvf + promo + insert;
     feeVatRate = p.efeeVat/100;
     convRate = p.econv/100;
@@ -319,12 +334,13 @@ function breakdown(P, p){
 // Stala bierze sie z oplaty za wystawienie, ktora nie zalezy od ceny.
 function priceFor(amountEur, p, basis){
   const t = p.vat/100;
-  const netEur = basis === "gross" ? amountEur / (1 + p.plVat/100) : amountEur;
+  let netEur = basis === "gross" ? amountEur / (1 + p.plVat/100) : amountEur;
+  if (rynek === "ebay" && gw24) netEur *= 1.2;   // blizniak ma zarobic 1,2 raza tyle
   let A, v, cv, F;
   if (rynek === "amazon"){
     A = p.fee/100; v = p.feeVat/100; cv = p.accs/100; F = 0;
   } else {
-    A = (p.efee + p.epromo)/100; v = p.efeeVat/100; cv = p.econv/100; F = p.einsert;
+    A = (p.efee + (gw24 ? p.epromo*2 : p.epromo))/100; v = p.efeeVat/100; cv = p.econv/100; F = p.einsert;
   }
   const k = (1 - cv) - (1 - cv)*(1 + v)*A - t/(1 + t) + v*A;
   const stala = F * (v - (1 - cv)*(1 + v));
@@ -396,7 +412,7 @@ function render(){
     $("bAccs").textContent = "−" + eur(b.conv);
   } else {
     $("lEfee").textContent = p.efee + "%";
-    $("lEpromo").textContent = p.epromo + "%";
+    $("lEpromo").textContent = (gw24 ? p.epromo*2 : p.epromo) + "%";
     $("lEconv").textContent = p.econv + "%";
     $("bEfee").textContent = eur(b.fvf);
     $("bEpromo").textContent = eur(b.promo);
@@ -419,6 +435,26 @@ function render(){
   $("bNetPln").textContent = pln(b.netPln);
   $("bGrossPln").textContent = pln(b.grossPln);
 
+  $("gwNie").setAttribute("aria-pressed", !gw24);
+  $("gwTak").setAttribute("aria-pressed", gw24);
+
+  // Ile zostaje, gdy kupujacy jest z kraju o innej stawce. Cel to wartosc
+  // towaru netto - czyli to, co zostaje przy stawce rownej zalozeniu cenowemu.
+  if (!ama) {
+    const ads = gw24 ? p.epromo*2 : p.epromo;
+    const oplaty = (p.efee + ads)/100;
+    const cel = P/(1 + p.vat/100) - P*oplaty - p.ship - p.extra;
+    const KRAJE = [["Niemcy",19],["Austria",20],["Francja",20],["Hiszpania",21],
+                   ["Włochy",22],["Portugalia",23],["Grecja",24],["Szwecja",25],["Węgry",27]];
+    $("kraje").innerHTML = KRAJE.map(([k,v]) => {
+      const z = P/(1 + v/100) - P*oplaty - p.ship - p.extra;
+      const d = z - cel;
+      return `<tr${v === p.vat ? ' class="hl"' : ""}><td>${k}</td><td>${v}%</td>` +
+             `<td>${eur(z)}</td><td>${pln(z*p.rate)}</td>` +
+             `<td>${d >= 0 ? "+" : "−"}${eur(Math.abs(d))}</td></tr>`;
+    }).join("");
+  }
+
   const steps = [...new Set([30,50,75,100,150,200,300,500,Math.round(P*100)/100])].filter(x => x > 0).sort((x,y) => x - y);
   $("scale").innerHTML = steps.map(x => {
     const r = breakdown(x, p);
@@ -426,6 +462,8 @@ function render(){
   }).join("");
 }
 
+$("gwNie").onclick = () => { gw24 = false; render(); };
+$("gwTak").onclick = () => { gw24 = true; render(); };
 $("mAmz").onclick = () => { rynek = "amazon"; render(); };
 $("mEbay").onclick = () => { rynek = "ebay"; render(); };
 $("tabFwd").onclick = () => { mode = "fwd"; render(); };
