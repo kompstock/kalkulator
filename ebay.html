@@ -122,8 +122,9 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     <div>
       <label for="gw" style="margin-bottom:8px">Wariant</label>
       <div class="cur" style="width:fit-content">
-        <button id="gwNie" aria-pressed="true">zwykły — ADS 5%</button>
-        <button id="gwTak" aria-pressed="false">GW24 — ADS 10%</button>
+        <button id="wBez" aria-pressed="false">bez ADS</button>
+        <button id="wZwy" aria-pressed="true">zwykły</button>
+        <button id="wGw" aria-pressed="false">GW24</button>
       </div>
     </div>
 
@@ -140,7 +141,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
       <div class="field has-cur">
         <input id="target" type="number" inputmode="decimal" min="0" step="0.01" value="1499">
         <div class="cur">
-          <button id="basGross" aria-pressed="true">cena z feedu</button>
+          <button id="basGross" aria-pressed="true">brutto</button>
           <button id="basNet" aria-pressed="false">netto</button>
         </div>
         <div class="cur">
@@ -148,7 +149,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
           <button id="curPln" aria-pressed="true">PLN</button>
         </div>
       </div>
-      <p class="note" style="margin-top:8px">„Cena z feedu" to kwota brutto z kompre.pl — kalkulator sam zdejmie z niej polski VAT, tak jak robi to generator.</p>
+      <p class="note" style="margin-top:8px">Brutto = kwota z polskim VAT, czyli cena ze sklepu. Kalkulator sam go zdejmie, tak jak robi to generator.</p>
     </div>
 
     <div class="result" id="resFwd">
@@ -218,7 +219,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     <div class="sgroup">
       <h3>Opłaty eBay</h3>
       <div class="srow"><label for="fee">Prowizja od sprzedaży<small>w wypłatach zamówienia mają opłaty 0 € — ustaw, gdy skończy się pakiet powitalny</small></label><span class="sin"><input id="fee" type="number" step="0.1" value="0"><i>%</i></span></div>
-      <div class="srow"><label for="ads">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu. Wariant GW24 płaci podwójnie</small></label><span class="sin"><input id="ads" type="number" step="0.1" value="5"><i>%</i></span></div>
+      <div class="srow"><label for="ads">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu. GW24 płaci podwójnie, „bez ADS” pomija</small></label><span class="sin"><input id="ads" type="number" step="0.1" value="5"><i>%</i></span></div>
     </div>
     <div class="sgroup">
       <h3>Twoje koszty</h3>
@@ -239,7 +240,7 @@ const $ = id => document.getElementById(id);
 const SET = ["vat","fee","ads","ship","extra","rate","plVat"];
 const DEF = {vat:23, fee:0, ads:5, ship:9, extra:0, rate:4.3775, plVat:23};
 const KEY = "ebay-calc-v1";
-let mode = "fwd", cur = "PLN", basis = "gross", gw24 = false;
+let mode = "fwd", cur = "PLN", basis = "gross", wariant = "zwykly";
 
 const fmt = n => n.toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2});
 const eur = n => fmt(n) + " €";
@@ -251,11 +252,11 @@ function load(){
     const s = JSON.parse(localStorage.getItem(KEY) || "{}");
     SET.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
     if (s.mode) mode = s.mode;
-    if (s.gw24 != null) gw24 = s.gw24;
+    if (s.wariant) wariant = s.wariant;
   }catch(e){}
 }
 function save(p){
-  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode, gw24})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode, wariant})); }catch(e){}
 }
 function params(){
   const p = {};
@@ -263,8 +264,9 @@ function params(){
   return p;
 }
 // Wariant gwarancyjny placi podwojna stawke promowania - tak samo jak profile
-// GW24 w generatorze.
-const adsRate = p => gw24 ? p.ads * 2 : p.ads;
+// GW24 w generatorze. "bez ADS" sluzy do sprawdzenia, ile kosztuje promowanie.
+const adsRate = p => wariant === "bez" ? 0 : wariant === "gw24" ? p.ads * 2 : p.ads;
+const mnoznik = () => wariant === "gw24" ? 1.2 : 1;
 const oplaty = p => (p.fee + adsRate(p)) / 100;
 
 // Ile zostaje z ceny brutto P, gdy kupujacy ma stawke 'vat'
@@ -286,7 +288,7 @@ function breakdown(P, p){
 function priceFor(amountEur, p, basis){
   // "cena z feedu" jest brutto z polskim VAT - zdejmujemy go, tak jak generator
   let cel = basis === "gross" ? amountEur / (1 + p.plVat/100) : amountEur;
-  if (gw24) cel *= 1.2;              // blizniak ma zarobic 1,2 raza tyle
+  cel *= mnoznik();                  // blizniak GW24 ma zarobic 1,2 raza tyle
   const m = 1/(1 + p.vat/100) - oplaty(p);
   return m > 0 ? (cel + p.ship + p.extra) / m : 0;
 }
@@ -306,8 +308,9 @@ function render(){
   $("curPln").setAttribute("aria-pressed", cur === "PLN");
   $("basNet").setAttribute("aria-pressed", basis === "net");
   $("basGross").setAttribute("aria-pressed", basis === "gross");
-  $("gwNie").setAttribute("aria-pressed", !gw24);
-  $("gwTak").setAttribute("aria-pressed", gw24);
+  $("wBez").setAttribute("aria-pressed", wariant === "bez");
+  $("wZwy").setAttribute("aria-pressed", wariant === "zwykly");
+  $("wGw").setAttribute("aria-pressed", wariant === "gw24");
 
   let P;
   if (mode === "fwd"){
@@ -365,8 +368,9 @@ $("curEur").onclick = () => { cur = "EUR"; render(); };
 $("curPln").onclick = () => { cur = "PLN"; render(); };
 $("basNet").onclick = () => { basis = "net"; render(); };
 $("basGross").onclick = () => { basis = "gross"; render(); };
-$("gwNie").onclick = () => { gw24 = false; render(); };
-$("gwTak").onclick = () => { gw24 = true; render(); };
+$("wBez").onclick = () => { wariant = "bez"; render(); };
+$("wZwy").onclick = () => { wariant = "zwykly"; render(); };
+$("wGw").onclick = () => { wariant = "gw24"; render(); };
 $("reset").onclick = () => { SET.forEach(k => $(k).value = DEF[k]); render(); };
 ["price","target",...SET].forEach(k => $(k).addEventListener("input", render));
 
