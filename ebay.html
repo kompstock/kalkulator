@@ -123,8 +123,8 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
       <label for="gw" style="margin-bottom:8px">Wariant</label>
       <div class="cur" style="width:fit-content">
         <button id="wBez" aria-pressed="false">bez ADS</button>
-        <button id="wZwy" aria-pressed="true">zwykły</button>
-        <button id="wGw" aria-pressed="false">GW24</button>
+        <button id="wZwy" aria-pressed="true">ADS 5%</button>
+        <button id="wGw" aria-pressed="false">ADS GW24 10%</button>
       </div>
     </div>
 
@@ -308,6 +308,8 @@ function render(){
   $("curPln").setAttribute("aria-pressed", cur === "PLN");
   $("basNet").setAttribute("aria-pressed", basis === "net");
   $("basGross").setAttribute("aria-pressed", basis === "gross");
+  $("wZwy").textContent = `ADS ${p.ads}%`;
+  $("wGw").textContent = `ADS GW24 ${p.ads * 2}%`;
   $("wBez").setAttribute("aria-pressed", wariant === "bez");
   $("wZwy").setAttribute("aria-pressed", wariant === "zwykly");
   $("wGw").setAttribute("aria-pressed", wariant === "gw24");
