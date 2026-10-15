@@ -101,8 +101,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 .sin i{font-style:normal;font-family:var(--mono);color:var(--muted);width:18px}
 .note{font-size:12px;color:var(--muted);margin:0}
 </style>
-</head>
-<body>
+
 <div class="wrap">
   <header>
     <h1>Kalkulator eBay</h1>
@@ -126,6 +125,16 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
         <button id="wZwy" aria-pressed="true">ADS 5%</button>
         <button id="wGw" aria-pressed="false">ADS GW24 10%</button>
       </div>
+    </div>
+
+    <div>
+      <label for="kupon" style="margin-bottom:8px">Kupon promocyjny</label>
+      <div class="cur" style="width:fit-content">
+        <button id="kOff" aria-pressed="true">wyłączony</button>
+        <button id="k5" aria-pressed="false">5%</button>
+        <button id="k10" aria-pressed="false">10%</button>
+      </div>
+      <p class="note" id="kInfo" style="margin-top:8px" hidden></p>
     </div>
 
     <div id="fwdBox">
@@ -164,9 +173,12 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     </div>
 
     <div class="result" id="resRev" hidden>
-      <div>
+      <div class="pair">
         <span class="lbl">Wystaw na eBay za</span>
-        <div class="big" id="rPrice">–</div>
+        <div class="trio">
+          <div><div class="big" id="rPrice">–</div><div class="cap">cena widoczna</div></div>
+          <div id="rPayBox" hidden><div class="big" id="rPay">–</div><div class="cap">klient zapłaci</div></div>
+        </div>
       </div>
     </div>
 
@@ -182,6 +194,8 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
       <table>
         <tbody>
           <tr class="sub"><td>Cena na eBayu brutto</td><td id="bGross"></td></tr>
+          <tr class="neg" id="rowKupon" hidden><td>Kupon promocyjny (<span id="lKupon"></span>)</td><td id="bKupon"></td></tr>
+          <tr class="sub" id="rowPlaci" hidden><td>Klient płaci</td><td id="bPlaci"></td></tr>
           <tr class="info"><td>VAT (<span id="lVat"></span>)</td><td id="bVatInfo"></td></tr>
           <tr class="info"><td>Wartość netto sprzedaży</td><td id="bNetSale"></td></tr>
           <tr class="info"><td>Prowizja od sprzedaży (<span id="lFee"></span>)</td><td id="bFee"></td></tr>
@@ -222,6 +236,11 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
       <div class="srow"><label for="ads">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu. GW24 płaci podwójnie, „bez ADS” pomija</small></label><span class="sin"><input id="ads" type="number" step="0.1" value="5"><i>%</i></span></div>
     </div>
     <div class="sgroup">
+      <h3>Kupon promocyjny</h3>
+      <div class="srow"><label for="kupon">Rabat dla kupującego<small>finansowany przez nas, odliczany przy kasie. 0 = wyłączony. To samo pole co <code>cena.kupon</code> w generatorze</small></label><span class="sin"><input id="kupon" type="number" step="0.1" min="0" max="99" value="0"><i>%</i></span></div>
+      <div class="srow"><label for="kuponMax">Limit rabatu<small>„10%, maks. 50 €”. 0 = bez limitu. Powyżej ceny limit÷rabat cena rośnie już tylko o sam limit</small></label><span class="sin"><input id="kuponMax" type="number" step="1" min="0" value="50"><i>€</i></span></div>
+    </div>
+    <div class="sgroup">
       <h3>Twoje koszty</h3>
       <div class="srow"><label for="ship">Wysyłka<small>netto, stała kwota na sztukę</small></label><span class="sin"><input id="ship" type="number" step="0.01" value="9"><i>€</i></span></div>
       <div class="srow"><label for="extra">Dodatkowe koszty<small>np. opakowanie</small></label><span class="sin"><input id="extra" type="number" step="0.01" value="0"><i>€</i></span></div>
@@ -237,8 +256,8 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
 <script>
 const $ = id => document.getElementById(id);
-const SET = ["vat","fee","ads","ship","extra","rate","plVat"];
-const DEF = {vat:23, fee:0, ads:5, ship:9, extra:0, rate:4.3775, plVat:23};
+const SET = ["vat","fee","ads","kupon","kuponMax","ship","extra","rate","plVat"];
+const DEF = {vat:23, fee:0, ads:5, kupon:0, kuponMax:50, ship:9, extra:0, rate:4.3775, plVat:23};
 const KEY = "ebay-calc-v1";
 let mode = "fwd", cur = "PLN", basis = "gross", wariant = "zwykly";
 
@@ -269,28 +288,49 @@ const adsRate = p => wariant === "bez" ? 0 : wariant === "gw24" ? p.ads * 2 : p.
 const mnoznik = () => wariant === "gw24" ? 1.2 : 1;
 const oplaty = p => (p.fee + adsRate(p)) / 100;
 
-// Ile zostaje z ceny brutto P, gdy kupujacy ma stawke 'vat'
+// Rabat, ktory kupujacy odlicza przy kasie i ktory placimy MY. Limit obcina go
+// kwotowo, wiec na drogim sprzecie "10%" to w praktyce stala kwota.
+function rabat(P, p){
+  const k = p.kupon / 100;
+  if (!(k > 0)) return 0;
+  const r = P * k;
+  return p.kuponMax > 0 ? Math.min(r, p.kuponMax) : r;
+}
+// Ile zostaje z ceny brutto P, gdy kupujacy ma stawke 'vat'.
+// VAT i oplaty licza sie od tego, co kupujacy FAKTYCZNIE zaplacil - rabat
+// zmniejsza wiec takze je, i wlasnie dlatego kupon jest tanszy niz ADS.
 function zostaje(P, p, vat){
-  return P / (1 + vat/100) - P * oplaty(p) - p.ship - p.extra;
+  const placi = P - rabat(P, p);
+  return placi / (1 + vat/100) - placi * oplaty(p) - p.ship - p.extra;
 }
 function breakdown(P, p){
-  const vat = P * (p.vat/100) / (1 + p.vat/100);
-  const fee = P * p.fee/100;
-  const ads = P * adsRate(p)/100;
+  const rab = rabat(P, p);
+  const placi = P - rab;
+  const vat = placi * (p.vat/100) / (1 + p.vat/100);
+  const fee = placi * p.fee/100;
+  const ads = placi * adsRate(p)/100;
   const netEur = zostaje(P, p, p.vat);
   const netPln = netEur * p.rate;
-  return {P, vat, netSale: P - vat, fee, ads, feeGross: fee + ads,
-          afterFee: P - fee - ads, netEur, netPln,
+  return {P, rab, placi, vat, netSale: placi - vat, fee, ads, feeGross: fee + ads,
+          afterFee: placi - fee - ads, netEur, netPln,
           grossPln: netPln * (1 + p.plVat/100)};
 }
 // Cena liczona od konca, dokladnie jak cena_eur() w generatorze:
 //   cena = (cel netto + wysylka) / (1/(1+VAT) - oplaty)
+// a potem podniesiona o kupon: rabat schodzi z ceny JUZ podniesionej, wiec
+// mnoznik to 1/(1-kupon), czyli +11,11% przy rabacie 10%, a nie +10%.
+// Powyzej progu limitu cene wystarczy podniesc o sam limit.
 function priceFor(amountEur, p, basis){
   // "cena z feedu" jest brutto z polskim VAT - zdejmujemy go, tak jak generator
   let cel = basis === "gross" ? amountEur / (1 + p.plVat/100) : amountEur;
   cel *= mnoznik();                  // blizniak GW24 ma zarobic 1,2 raza tyle
   const m = 1/(1 + p.vat/100) - oplaty(p);
-  return m > 0 ? (cel + p.ship + p.extra) / m : 0;
+  if (!(m > 0)) return 0;
+  const bez = (cel + p.ship + p.extra) / m;
+  const k = p.kupon / 100;
+  if (!(k > 0) || k >= 1) return bez;
+  const z = bez / (1 - k);
+  return p.kuponMax > 0 ? Math.min(z, bez + p.kuponMax) : z;
 }
 
 const KRAJE = [["Niemcy",19],["Austria",20],["Francja",20],["Hiszpania",21],
@@ -313,6 +353,9 @@ function render(){
   $("wBez").setAttribute("aria-pressed", wariant === "bez");
   $("wZwy").setAttribute("aria-pressed", wariant === "zwykly");
   $("wGw").setAttribute("aria-pressed", wariant === "gw24");
+  $("kOff").setAttribute("aria-pressed", !(p.kupon > 0));
+  $("k5").setAttribute("aria-pressed", p.kupon === 5);
+  $("k10").setAttribute("aria-pressed", p.kupon === 10);
 
   let P;
   if (mode === "fwd"){
@@ -322,7 +365,9 @@ function render(){
     const amountEur = cur === "PLN" ? (p.rate ? t / p.rate : 0) : t;
     P = Math.max(0, Math.ceil(priceFor(amountEur, p, basis) - 1e-9));
     $("rPrice").textContent = P.toLocaleString("pl-PL") + " €";
+    $("rPay").textContent = fmt(P - rabat(P, p)) + " €";
   }
+  $("rPayBox").hidden = !(p.kupon > 0);
 
   const b = breakdown(P, p);
   const keep = P ? b.netEur / P : 0;
@@ -339,6 +384,22 @@ function render(){
   $("lAds").textContent = adsRate(p) + "%";
   $("lPlVat").textContent = p.plVat + "%";
   $("lRate").textContent = p.rate.toLocaleString("pl-PL",{maximumFractionDigits:8});
+
+  const maKupon = p.kupon > 0;
+  $("rowKupon").hidden = $("rowPlaci").hidden = !maKupon;
+  $("kInfo").hidden = !maKupon;
+  if (maKupon){
+    const limit = p.kuponMax > 0;
+    const wLimicie = limit && P * p.kupon/100 > p.kuponMax + 1e-9;
+    $("lKupon").textContent = p.kupon + "%" + (limit ? `, maks. ${p.kuponMax} €` : "");
+    $("bKupon").textContent = "−" + eur(b.rab);
+    $("bPlaci").textContent = eur(b.placi);
+    $("kInfo").textContent =
+      `Cena idzie w górę o ${(100/(100 - p.kupon) * 100 - 100).toFixed(2).replace(".", ",")}%, `
+      + `nie o ${p.kupon}% — rabat schodzi z ceny już podniesionej.`
+      + (limit ? ` Powyżej ${fmt(p.kuponMax / (p.kupon/100))} € rabat stoi na ${p.kuponMax} €`
+                 + (wLimicie ? " — ta cena już w nim jest." : ".") : "");
+  }
 
   $("bGross").textContent = eur(b.P);
   $("bVatInfo").textContent = eur(b.vat);
@@ -373,6 +434,11 @@ $("basGross").onclick = () => { basis = "gross"; render(); };
 $("wBez").onclick = () => { wariant = "bez"; render(); };
 $("wZwy").onclick = () => { wariant = "zwykly"; render(); };
 $("wGw").onclick = () => { wariant = "gw24"; render(); };
+// Przyciski tylko ustawiaja pole - jedynym zrodlem prawdy jest input w ustawieniach,
+// wiec dwa miejsca nie moga sie rozjechac.
+$("kOff").onclick = () => { $("kupon").value = 0; render(); };
+$("k5").onclick = () => { $("kupon").value = 5; render(); };
+$("k10").onclick = () => { $("kupon").value = 10; render(); };
 $("reset").onclick = () => { SET.forEach(k => $(k).value = DEF[k]); render(); };
 ["price","target",...SET].forEach(k => $(k).addEventListener("input", render));
 
