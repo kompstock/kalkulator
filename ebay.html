@@ -55,6 +55,12 @@ label,.lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:up
 .cur{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .cur button{font-family:var(--mono);font-weight:600;border:0;padding:0 14px;background:var(--bg);color:var(--muted);cursor:pointer}
 .cur button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+/* Cztery warianty nie mieszcza sie w 'fit-content' na telefonie - ostatni
+   przycisk byl przycinany przez overflow:hidden. Pasek rozciagamy na cala
+   szerokosc, a przyciski dziela ja rowno, tak jak zakladki wyzej. */
+.warianty{width:100%}
+.warianty button{flex:1;padding:8px 6px;text-align:center;line-height:1.25}
+@media (max-width:430px){ .warianty button{font-size:13px;padding:8px 2px} }
 input:focus,.cur button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
 .result{background:var(--accent-soft);border-radius:8px;padding:16px;display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end}
@@ -120,7 +126,8 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
     <div>
       <label for="ads" style="margin-bottom:8px">Wariant</label>
-      <div class="cur" style="width:fit-content">
+      <div class="cur warianty">
+        <button id="wAds0" aria-pressed="false">bez ADS</button>
         <button id="wAds5" aria-pressed="true">ADS 5%</button>
         <button id="wAds10" aria-pressed="false">ADS 10%</button>
         <button id="wGw" aria-pressed="false">GW24</button>
@@ -234,7 +241,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     <div class="sgroup">
       <h3>Opłaty eBay</h3>
       <div class="srow"><label for="fee">Prowizja od sprzedaży<small>w wypłatach zamówienia mają opłaty 0 € — ustaw, gdy skończy się pakiet powitalny</small></label><span class="sin"><input id="fee" type="number" step="0.1" value="0"><i>%</i></span></div>
-      <div class="srow"><label for="ads">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu. Przyciski wariantu wpisują tu 5 albo 10; możesz wpisać dowolną, też 0</small></label><span class="sin"><input id="ads" type="number" step="0.1" value="5"><i>%</i></span></div>
+      <div class="srow"><label for="ads">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu. przyciski wariantu wpisują tu 0, 5 albo 10; ręcznie możesz wpisać dowolną</small></label><span class="sin"><input id="ads" type="number" step="0.1" value="5"><i>%</i></span></div>
     </div>
     <div class="sgroup">
       <h3>Kupon promocyjny</h3>
@@ -353,14 +360,18 @@ function render(){
   $("curPln").setAttribute("aria-pressed", cur === "PLN");
   $("basNet").setAttribute("aria-pressed", basis === "net");
   $("basGross").setAttribute("aria-pressed", basis === "gross");
+  $("wAds0").setAttribute("aria-pressed", !gw24 && p.ads === 0);
   $("wAds5").setAttribute("aria-pressed", !gw24 && p.ads === 5);
   $("wAds10").setAttribute("aria-pressed", !gw24 && p.ads === 10);
   $("wGw").setAttribute("aria-pressed", gw24);
   $("wInfo").textContent = gw24
     ? `GW24 = ADS ${p.ads}% + mnożnik zysku ×1,2. Mnożnik działa na zysku, nie na cenie: `
       + `bliźniak ma zarobić 1,2 raza tyle, a drożeje bardziej niż o 20%, bo wysyłka się nie mnoży.`
+    : p.ads === 0
+    ? `Bez promowania — najniższa możliwa cena widoczna. Zysk wychodzi taki sam jak przy każdej `
+      + `innej stawce, bo ADS jest kosztem wliczanym w cenę, a nie uszczerbkiem na zysku.`
     : `ADS ${p.ads}% to koszt wliczony w cenę — zysk zostaje taki sam jak przy każdej innej stawce. `
-      + `Stawkę zmienisz w ustawieniach, 0% też działa.`;
+      + `Zmienia się tylko cena. Dowolną stawkę wpiszesz w ustawieniach.`;
   $("kOff").setAttribute("aria-pressed", !(p.kupon > 0));
   $("k5").setAttribute("aria-pressed", p.kupon === 5);
   $("k10").setAttribute("aria-pressed", p.kupon === 10);
@@ -441,6 +452,7 @@ $("basNet").onclick = () => { basis = "net"; render(); };
 $("basGross").onclick = () => { basis = "gross"; render(); };
 // Przyciski ustawiaja pole ADS i mnoznik - pole w ustawieniach zostaje jedynym
 // zrodlem stawki, wiec mozna tam wpisac dowolna (np. 0 na czas akcji).
+$("wAds0").onclick = () => { $("ads").value = 0; gw24 = false; render(); };
 $("wAds5").onclick = () => { $("ads").value = 5; gw24 = false; render(); };
 $("wAds10").onclick = () => { $("ads").value = 10; gw24 = false; render(); };
 $("wGw").onclick = () => { $("ads").value = 10; gw24 = true; render(); };
