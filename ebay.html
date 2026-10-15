@@ -119,12 +119,13 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     </div>
 
     <div>
-      <label for="gw" style="margin-bottom:8px">Wariant</label>
+      <label for="ads" style="margin-bottom:8px">Wariant</label>
       <div class="cur" style="width:fit-content">
-        <button id="wBez" aria-pressed="false">bez ADS</button>
-        <button id="wZwy" aria-pressed="true">ADS 5%</button>
-        <button id="wGw" aria-pressed="false">ADS GW24 10%</button>
+        <button id="wAds5" aria-pressed="true">ADS 5%</button>
+        <button id="wAds10" aria-pressed="false">ADS 10%</button>
+        <button id="wGw" aria-pressed="false">GW24</button>
       </div>
+      <p class="note" id="wInfo" style="margin-top:8px"></p>
     </div>
 
     <div>
@@ -233,7 +234,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     <div class="sgroup">
       <h3>Opłaty eBay</h3>
       <div class="srow"><label for="fee">Prowizja od sprzedaży<small>w wypłatach zamówienia mają opłaty 0 € — ustaw, gdy skończy się pakiet powitalny</small></label><span class="sin"><input id="fee" type="number" step="0.1" value="0"><i>%</i></span></div>
-      <div class="srow"><label for="ads">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu. GW24 płaci podwójnie, „bez ADS” pomija</small></label><span class="sin"><input id="ads" type="number" step="0.1" value="5"><i>%</i></span></div>
+      <div class="srow"><label for="ads">Promowanie ofert (ADS)<small>potwierdzone w raporcie transakcji: 5% na każdym zamówieniu. Przyciski wariantu wpisują tu 5 albo 10; możesz wpisać dowolną, też 0</small></label><span class="sin"><input id="ads" type="number" step="0.1" value="5"><i>%</i></span></div>
     </div>
     <div class="sgroup">
       <h3>Kupon promocyjny</h3>
@@ -259,7 +260,10 @@ const $ = id => document.getElementById(id);
 const SET = ["vat","fee","ads","kupon","kuponMax","ship","extra","rate","plVat"];
 const DEF = {vat:23, fee:0, ads:5, kupon:0, kuponMax:50, ship:9, extra:0, rate:4.3775, plVat:23};
 const KEY = "ebay-calc-v1";
-let mode = "fwd", cur = "PLN", basis = "gross", wariant = "zwykly";
+// gw24 to WYLACZNIE mnoznik zysku. Stawka ADS idzie z pola w ustawieniach,
+// bo w generatorze to tez dwie niezalezne rzeczy: profil GW24 ma swoje
+// ads 0.1 ORAZ mnoznik_ceny 1.2, i mozna je ustawiac osobno.
+let mode = "fwd", cur = "PLN", basis = "gross", gw24 = false;
 
 const fmt = n => n.toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2});
 const eur = n => fmt(n) + " €";
@@ -271,21 +275,22 @@ function load(){
     const s = JSON.parse(localStorage.getItem(KEY) || "{}");
     SET.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
     if (s.mode) mode = s.mode;
-    if (s.wariant) wariant = s.wariant;
+    if (s.gw24 != null) gw24 = !!s.gw24;
   }catch(e){}
 }
 function save(p){
-  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode, wariant})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode, gw24})); }catch(e){}
 }
 function params(){
   const p = {};
   SET.forEach(k => p[k] = parseFloat($(k).value) || 0);
   return p;
 }
-// Wariant gwarancyjny placi podwojna stawke promowania - tak samo jak profile
-// GW24 w generatorze. "bez ADS" sluzy do sprawdzenia, ile kosztuje promowanie.
-const adsRate = p => wariant === "bez" ? 0 : wariant === "gw24" ? p.ads * 2 : p.ads;
-const mnoznik = () => wariant === "gw24" ? 1.2 : 1;
+// Mnoznik dziala na ZYSKU, nie na cenie: blizniak ma zarobic 1,2 raza tyle.
+// O ile przez to podrozeje, wychodzi dopiero z rachunku - przy ADS 10% jest to
+// okolo 27%, a nie 20%, bo wysylka w cenie sie nie mnozy.
+const adsRate = p => p.ads;
+const mnoznik = () => gw24 ? 1.2 : 1;
 const oplaty = p => (p.fee + adsRate(p)) / 100;
 
 // Rabat, ktory kupujacy odlicza przy kasie i ktory placimy MY. Limit obcina go
@@ -348,11 +353,14 @@ function render(){
   $("curPln").setAttribute("aria-pressed", cur === "PLN");
   $("basNet").setAttribute("aria-pressed", basis === "net");
   $("basGross").setAttribute("aria-pressed", basis === "gross");
-  $("wZwy").textContent = `ADS ${p.ads}%`;
-  $("wGw").textContent = `ADS GW24 ${p.ads * 2}%`;
-  $("wBez").setAttribute("aria-pressed", wariant === "bez");
-  $("wZwy").setAttribute("aria-pressed", wariant === "zwykly");
-  $("wGw").setAttribute("aria-pressed", wariant === "gw24");
+  $("wAds5").setAttribute("aria-pressed", !gw24 && p.ads === 5);
+  $("wAds10").setAttribute("aria-pressed", !gw24 && p.ads === 10);
+  $("wGw").setAttribute("aria-pressed", gw24);
+  $("wInfo").textContent = gw24
+    ? `GW24 = ADS ${p.ads}% + mnożnik zysku ×1,2. Mnożnik działa na zysku, nie na cenie: `
+      + `bliźniak ma zarobić 1,2 raza tyle, a drożeje bardziej niż o 20%, bo wysyłka się nie mnoży.`
+    : `ADS ${p.ads}% to koszt wliczony w cenę — zysk zostaje taki sam jak przy każdej innej stawce. `
+      + `Stawkę zmienisz w ustawieniach, 0% też działa.`;
   $("kOff").setAttribute("aria-pressed", !(p.kupon > 0));
   $("k5").setAttribute("aria-pressed", p.kupon === 5);
   $("k10").setAttribute("aria-pressed", p.kupon === 10);
@@ -431,9 +439,11 @@ $("curEur").onclick = () => { cur = "EUR"; render(); };
 $("curPln").onclick = () => { cur = "PLN"; render(); };
 $("basNet").onclick = () => { basis = "net"; render(); };
 $("basGross").onclick = () => { basis = "gross"; render(); };
-$("wBez").onclick = () => { wariant = "bez"; render(); };
-$("wZwy").onclick = () => { wariant = "zwykly"; render(); };
-$("wGw").onclick = () => { wariant = "gw24"; render(); };
+// Przyciski ustawiaja pole ADS i mnoznik - pole w ustawieniach zostaje jedynym
+// zrodlem stawki, wiec mozna tam wpisac dowolna (np. 0 na czas akcji).
+$("wAds5").onclick = () => { $("ads").value = 5; gw24 = false; render(); };
+$("wAds10").onclick = () => { $("ads").value = 10; gw24 = false; render(); };
+$("wGw").onclick = () => { $("ads").value = 10; gw24 = true; render(); };
 // Przyciski tylko ustawiaja pole - jedynym zrodlem prawdy jest input w ustawieniach,
 // wiec dwa miejsca nie moga sie rozjechac.
 $("kOff").onclick = () => { $("kupon").value = 0; render(); };
