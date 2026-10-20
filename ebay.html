@@ -106,11 +106,18 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 .sin input{width:120px;text-align:right;font-family:var(--mono);font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 .sin i{font-style:normal;font-family:var(--mono);color:var(--muted);width:18px}
 .note{font-size:12px;color:var(--muted);margin:0}
+.head-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.reset-btn{font:inherit;font-size:14px;font-weight:500;padding:7px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);cursor:pointer}
+.reset-btn:hover{border-color:var(--accent);color:var(--accent)}
+.reset-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 
 <div class="wrap">
   <header>
-    <h1>Kalkulator eBay</h1>
+    <div class="head-row">
+      <h1>Kalkulator eBay</h1>
+      <button id="resetTop" class="reset-btn" title="Przywraca wszystkie pola, warianty i ustawienia do wartości domyślnych">↺ Resetuj</button>
+    </div>
     <p class="sub">Ta sama arytmetyka, co w generatorze ofert: wycena przy VAT 23%, prowizja, promowanie ofert i wysyłka.</p>
     <nav class="rynki">
       <a href="https://kompstock.github.io/kalkulator/">Amazon DE</a>
@@ -461,7 +468,18 @@ $("wGw").onclick = () => { $("ads").value = 10; gw24 = true; render(); };
 $("kOff").onclick = () => { $("kupon").value = 0; render(); };
 $("k5").onclick = () => { $("kupon").value = 5; render(); };
 $("k10").onclick = () => { $("kupon").value = 10; render(); };
-$("reset").onclick = () => { SET.forEach(k => $(k).value = DEF[k]); render(); };
+// Pelny reset: ustawienia, wariant, kupon, kwoty, zakladka i przelaczniki.
+// Samo SET nie wystarczalo - zostawalo np. GW24 i wygladalo, jakby nic sie nie stalo.
+function resetAll(){
+  SET.forEach(k => $(k).value = DEF[k]);
+  $("price").value = 377;
+  $("target").value = 1499;
+  mode = "fwd"; cur = "PLN"; basis = "gross"; gw24 = false;
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  render();
+}
+$("reset").onclick = resetAll;
+$("resetTop").onclick = resetAll;
 ["price","target",...SET].forEach(k => $(k).addEventListener("input", render));
 
 load();
