@@ -100,15 +100,21 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 .sin input{width:120px;text-align:right;font-family:var(--mono);font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 .sin i{font-style:normal;font-family:var(--mono);color:var(--muted);width:18px}
 .note{font-size:12px;color:var(--muted);margin:0}
+.opts{display:flex;flex-wrap:wrap;gap:12px 16px}
+.opts > div{display:flex;flex-direction:column;min-width:0}
+.opts select{font:inherit;font-size:15px;font-weight:500;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.opts .cur{min-height:40px}
+.opts .cur button{font-family:var(--sans);font-size:14px}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>Kalkulator Amazon</h1>
-    <p class="sub">Amazon DE: ile realnie zostaje z ceny brutto po VAT, prowizji, ACCS i wysyłce — albo za ile wystawić, żeby dostać konkretną kwotę.</p>
+    <p class="sub">Amazon DE, AT, FR, IT, ES, BE: ile realnie zostaje z ceny brutto po VAT, prowizji, podatku cyfrowym, ACCS i wysyłce — albo za ile wystawić, żeby dostać konkretną kwotę.</p>
     <nav class="rynki">
-      <a href="https://kompstock.github.io/kalkulator/" aria-current="page">Amazon DE</a>
+      <a href="https://kompstock.github.io/kalkulator/" aria-current="page">Amazon</a>
       <a href="https://kompstock.github.io/kalkulator/ebay.html">eBay</a>
     </nav>
   </header>
@@ -117,6 +123,29 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     <div class="tabs" role="tablist">
       <button id="tabFwd" role="tab" aria-selected="true">Mam cenę → ile zostaje</button>
       <button id="tabRev" role="tab" aria-selected="false">Chcę dostać → za ile wystawić</button>
+    </div>
+
+    <div class="opts">
+      <div>
+        <label for="kraj">Kraj wysyłki</label>
+        <select id="kraj">
+          <option value="DE">Niemcy · VAT 19%</option>
+          <option value="AT">Austria · VAT 20%</option>
+          <option value="FR">Francja · VAT 20% + DST</option>
+          <option value="IT">Włochy · VAT 22% + DST</option>
+          <option value="ES">Hiszpania · VAT 21% + DST</option>
+          <option value="BE">Belgia · VAT 21%</option>
+          <option value="NL">Holandia · VAT 21%</option>
+          <option value="PL">Polska · VAT 23%</option>
+        </select>
+      </div>
+      <div>
+        <span class="lbl">Produkt</span>
+        <div class="cur">
+          <button id="catLap" aria-pressed="true">Laptop · 7%</button>
+          <button id="catAcc" aria-pressed="false">Akcesoria · 15%</button>
+        </div>
+      </div>
     </div>
 
     <div id="fwdBox">
@@ -180,12 +209,13 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
           <tr class="info"><td>Prowizja Amazon netto (<span id="lFee"></span> od brutto)</td><td id="bFeeNet"></td></tr>
           <tr class="info"><td>VAT od prowizji (<span id="lFeeVat"></span>)</td><td id="bFeeVat"></td></tr>
           <tr class="neg"><td>Prowizja Amazon brutto</td><td id="bFeeGross"></td></tr>
+          <tr class="neg" id="rowDst"><td>Podatek cyfrowy DST (<span id="lDst"></span> od prowizji)</td><td id="bDst"></td></tr>
           <tr class="sub"><td>Kwota po prowizji</td><td id="bAfterFee"></td></tr>
           <tr class="neg"><td>ACCS (<span id="lAccs"></span>)</td><td id="bAccs"></td></tr>
           <tr class="sub"><td>Kwota po ACCS</td><td id="bAfterAccs"></td></tr>
           <tr class="neg"><td>VAT sprzedażowy do oddania</td><td id="bVat"></td></tr>
           <tr class="pos"><td>Odzyskany VAT z prowizji</td><td id="bVatBack"></td></tr>
-          <tr class="neg"><td>Wysyłka</td><td id="bShip"></td></tr>
+          <tr class="neg"><td>Wysyłka (z rezerwą na zwroty)</td><td id="bShip"></td></tr>
           <tr class="neg"><td>Dodatkowe koszty</td><td id="bExtra"></td></tr>
           <tr class="total"><td>Zostaje netto</td><td id="bNetEur"></td></tr>
           <tr class="pln"><td>w PLN (kurs <span id="lRate"></span>)</td><td id="bNetPln"></td></tr>
@@ -209,18 +239,19 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
   <section class="panel">
     <h2>Ustawienia</h2>
     <div class="sgroup">
-      <h3>Sprzedaż w Niemczech</h3>
-      <div class="srow"><label for="vat">VAT niemiecki<small>odprowadzany od ceny sprzedaży</small></label><span class="sin"><input id="vat" type="number" step="0.1" value="19"><i>%</i></span></div>
+      <h3>Kraj wysyłki</h3>
+      <div class="srow"><label for="vat">VAT kraju wysyłki<small>odprowadzany od ceny sprzedaży; ustawia go wybór kraju, możesz zmienić ręcznie</small></label><span class="sin"><input id="vat" type="number" step="0.1" value="19"><i>%</i></span></div>
+      <div class="srow"><label for="dst">Podatek cyfrowy DST<small>% od prowizji brutto; FR, IT, ES: 3%, reszta 0%</small></label><span class="sin"><input id="dst" type="number" step="0.1" value="0"><i>%</i></span></div>
     </div>
     <div class="sgroup">
       <h3>Opłaty Amazon</h3>
-      <div class="srow"><label for="fee">Prowizja<small>netto, liczona od ceny brutto</small></label><span class="sin"><input id="fee" type="number" step="0.1" value="7"><i>%</i></span></div>
+      <div class="srow"><label for="fee">Prowizja<small>netto, od ceny brutto; laptop 7%, akcesoria 15% — możesz zmienić ręcznie</small></label><span class="sin"><input id="fee" type="number" step="0.1" value="7"><i>%</i></span></div>
       <div class="srow"><label for="feeVat">VAT od prowizji<small>doliczany przez Amazon, odzyskujesz go</small></label><span class="sin"><input id="feeVat" type="number" step="0.1" value="23"><i>%</i></span></div>
       <div class="srow"><label for="accs">ACCS — przewalutowanie<small>od kwoty po prowizji</small></label><span class="sin"><input id="accs" type="number" step="0.1" value="1.5"><i>%</i></span></div>
     </div>
     <div class="sgroup">
       <h3>Twoje koszty</h3>
-      <div class="srow"><label for="ship">Wysyłka<small>stała kwota na sztukę</small></label><span class="sin"><input id="ship" type="number" step="0.01" value="9"><i>€</i></span></div>
+      <div class="srow"><label for="ship">Wysyłka z rezerwą na zwroty<small>9 € wysyłka + ok. 2,50 € na 10% zwrotów (wysyłka 9 €, zwrot 11 €, zatrzymana prowizja)</small></label><span class="sin"><input id="ship" type="number" step="0.01" value="11.5"><i>€</i></span></div>
       <div class="srow"><label for="extra">Dodatkowe koszty<small>np. opakowanie</small></label><span class="sin"><input id="extra" type="number" step="0.01" value="0"><i>€</i></span></div>
     </div>
     <div class="sgroup">
@@ -234,10 +265,14 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 
 <script>
 const $ = id => document.getElementById(id);
-const SET = ["vat","fee","feeVat","accs","ship","extra","rate","plVat"];
-const DEF = {vat:19,fee:7,feeVat:23,accs:1.5,ship:9,extra:0,rate:4.34575254,plVat:23};
-const KEY = "amz-calc-v2";
-let mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross";
+const SET = ["vat","dst","fee","feeVat","accs","ship","extra","rate","plVat"];
+const DEF = {vat:19,dst:0,fee:7,feeVat:23,accs:1.5,ship:11.5,extra:0,rate:4.34575254,plVat:23};
+// VAT kraju (OSS) i podatek cyfrowy od prowizji – zgodne z raportami Amazon 10/2026
+const KRAJE = {DE:{vat:19,dst:0}, AT:{vat:20,dst:0}, FR:{vat:20,dst:3}, IT:{vat:22,dst:3},
+               ES:{vat:21,dst:3}, BE:{vat:21,dst:0}, NL:{vat:21,dst:0}, PL:{vat:23,dst:0}};
+const KAT = {lap:7, acc:15};
+const KEY = "amz-calc-v4";
+let mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross", kraj = "DE", kat = "lap";
 
 const fmt = n => n.toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2});
 const eur = n => fmt(n) + " €";
@@ -249,10 +284,12 @@ function load(){
     const s = JSON.parse(localStorage.getItem(KEY) || "{}");
     SET.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
     if (s.mode) mode = s.mode;
+    if (KRAJE[s.kraj]) kraj = s.kraj;
+    if (KAT[s.kat]) kat = s.kat;
   }catch(e){}
 }
 function save(p){
-  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode})); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify({...p, mode, kraj, kat})); }catch(e){}
 }
 function params(){
   const p = {};
@@ -261,26 +298,28 @@ function params(){
 }
 
 // Pełne rozliczenie dla ceny brutto P
+// DST to % od prowizji brutto (np. 0,68 € przy prowizji 22,67 €); VAT od niego nie wraca
 function breakdown(P, p){
-  const t = p.vat/100, c = p.fee/100, v = p.feeVat/100, a = p.accs/100;
+  const t = p.vat/100, c = p.fee/100, v = p.feeVat/100, a = p.accs/100, d = p.dst/100;
   const vat = P * t / (1 + t);
   const feeNet = P * c;
   const feeVat = feeNet * v;
   const feeGross = feeNet + feeVat;
-  const afterFee = P - feeGross;
+  const dst = feeGross * d;
+  const afterFee = P - feeGross - dst;
   const accs = afterFee * a;
   const afterAccs = afterFee - accs;
   const netEur = afterAccs - vat + feeVat - p.ship - p.extra;
   const netPln = netEur * p.rate;
-  return {P, vat, netSale:P - vat, feeNet, feeVat, feeGross, afterFee, accs, afterAccs,
+  return {P, vat, netSale:P - vat, feeNet, feeVat, feeGross, dst, afterFee, accs, afterAccs,
           netEur, netPln, grossPln: netPln * (1 + p.plVat/100)};
 }
 // Netto jest liniowe względem ceny: netto = k·P − stałe
 // brutto = netto + polski VAT, więc najpierw zdejmujemy VAT PL
 function priceFor(amountEur, p, basis){
-  const t = p.vat/100, c = p.fee/100, v = p.feeVat/100, a = p.accs/100;
+  const t = p.vat/100, c = p.fee/100, v = p.feeVat/100, a = p.accs/100, d = p.dst/100;
   const netEur = basis === "gross" ? amountEur / (1 + p.plVat/100) : amountEur;
-  const k = (1 - c*(1+v))*(1 - a) + c*v - t/(1+t);
+  const k = (1 - c*(1+v)*(1+d))*(1 - a) + c*v - t/(1+t);
   return (netEur + p.ship + p.extra) / k;
 }
 
@@ -298,6 +337,9 @@ function render(){
   $("basGross").setAttribute("aria-pressed", basis === "gross");
   $("pbNet").setAttribute("aria-pressed", priceBasis === "net");
   $("pbGross").setAttribute("aria-pressed", priceBasis === "gross");
+  $("kraj").value = kraj;
+  $("catLap").setAttribute("aria-pressed", kat === "lap");
+  $("catAcc").setAttribute("aria-pressed", kat === "acc");
 
   let P;
   if (mode === "fwd"){
@@ -333,6 +375,9 @@ function render(){
   $("bFeeNet").textContent = eur(b.feeNet);
   $("bFeeVat").textContent = eur(b.feeVat);
   $("bFeeGross").textContent = "−" + eur(b.feeGross);
+  $("rowDst").hidden = !p.dst;
+  $("lDst").textContent = p.dst + "%";
+  $("bDst").textContent = "−" + eur(b.dst);
   $("bAfterFee").textContent = eur(b.afterFee);
   $("bAccs").textContent = "−" + eur(b.accs);
   $("bAfterAccs").textContent = eur(b.afterAccs);
@@ -361,7 +406,11 @@ $("basNet").onclick = () => { basis = "net"; render(); };
 $("basGross").onclick = () => { basis = "gross"; render(); };
 $("pbNet").onclick = () => { priceBasis = "net"; render(); };
 $("pbGross").onclick = () => { priceBasis = "gross"; render(); };
-$("reset").onclick = () => { SET.forEach(k => $(k).value = DEF[k]); render(); };
+// Wybór kraju i produktu wpisuje stawki do pól – dalej można je zmienić ręcznie
+$("kraj").onchange = () => { kraj = $("kraj").value; $("vat").value = KRAJE[kraj].vat; $("dst").value = KRAJE[kraj].dst; render(); };
+$("catLap").onclick = () => { kat = "lap"; $("fee").value = KAT.lap; render(); };
+$("catAcc").onclick = () => { kat = "acc"; $("fee").value = KAT.acc; render(); };
+$("reset").onclick = () => { SET.forEach(k => $(k).value = DEF[k]); kraj = "DE"; kat = "lap"; render(); };
 ["price","target",...SET].forEach(k => $(k).addEventListener("input", render));
 
 load();
