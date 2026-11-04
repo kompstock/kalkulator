@@ -251,7 +251,7 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
     </div>
     <div class="sgroup">
       <h3>Twoje koszty</h3>
-      <div class="srow"><label for="ship">Wysyłka z rezerwą na zwroty<small>9 € wysyłka + ok. 2,50 € na 10% zwrotów (wysyłka 9 €, zwrot 11 €, zatrzymana prowizja)</small></label><span class="sin"><input id="ship" type="number" step="0.01" value="11.5"><i>€</i></span></div>
+      <div class="srow"><label for="ship">Wysyłka z rezerwą na zwroty<small>8 € wysyłka + 3 € na 10% zwrotów (wysyłka 8 €, zwrot 11 €, zatrzymana prowizja)</small></label><span class="sin"><input id="ship" type="number" step="0.01" value="11"><i>€</i></span></div>
       <div class="srow"><label for="extra">Dodatkowe koszty<small>np. opakowanie</small></label><span class="sin"><input id="extra" type="number" step="0.01" value="0"><i>€</i></span></div>
     </div>
     <div class="sgroup">
@@ -266,12 +266,12 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 <script>
 const $ = id => document.getElementById(id);
 const SET = ["vat","dst","fee","feeVat","accs","ship","extra","rate","plVat"];
-const DEF = {vat:19,dst:0,fee:7,feeVat:23,accs:1.5,ship:11.5,extra:0,rate:4.34575254,plVat:23};
+const DEF = {vat:19,dst:0,fee:7,feeVat:23,accs:1.5,ship:11,extra:0,rate:4.34575254,plVat:23};
 // VAT kraju (OSS) i podatek cyfrowy od prowizji – zgodne z raportami Amazon 10/2026
 const KRAJE = {DE:{vat:19,dst:0}, AT:{vat:20,dst:0}, FR:{vat:20,dst:3}, IT:{vat:22,dst:3},
                ES:{vat:21,dst:3}, BE:{vat:21,dst:0}, NL:{vat:21,dst:0}, PL:{vat:23,dst:0}};
 const KAT = {lap:7, acc:15};
-const KEY = "amz-calc-v4";
+const KEY = "amz-calc-v5";
 let mode = "fwd", cur = "PLN", basis = "gross", priceBasis = "gross", kraj = "DE", kat = "lap";
 
 const fmt = n => n.toLocaleString("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2});
