@@ -262,7 +262,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
     </div>
     <div class="sgroup">
       <h3>Przeliczenie na PLN</h3>
-      <div class="srow"><label for="rate">Kurs EUR/PLN<small>NBP, ten sam co w generatorze</small></label><span class="sin"><input id="rate" type="number" step="0.0001" value="4.3775"><i>zł</i></span></div>
+      <div class="srow"><label for="rate">Kurs EUR/PLN<small>NBP, ten sam co w generatorze</small></label><span class="sin"><input id="rate" type="number" step="0.0001" value="4.39"><i>zł</i></span></div>
       <div class="srow"><label for="plVat">VAT polski<small>zdejmowany z ceny z feedu i doliczany do PLN netto</small></label><span class="sin"><input id="plVat" type="number" step="0.1" value="23"><i>%</i></span></div>
     </div>
     <p class="note" id="reset" style="cursor:pointer;text-decoration:underline;width:fit-content">Przywróć domyślne</p>
@@ -272,7 +272,7 @@ tr.pln td{font-weight:600;border-bottom:none;padding-top:0}
 <script>
 const $ = id => document.getElementById(id);
 const SET = ["vat","fee","ads","kupon","kuponMax","ship","extra","rate","plVat"];
-const DEF = {vat:23, fee:0, ads:5, kupon:0, kuponMax:50, ship:9, extra:0, rate:4.3775, plVat:23};
+const DEF = {vat:23, fee:0, ads:5, kupon:0, kuponMax:50, ship:9, extra:0, rate:4.39, plVat:23};
 const KEY = "ebay-calc-v1";
 // gw24 to WYLACZNIE mnoznik zysku. Stawka ADS idzie z pola w ustawieniach,
 // bo w generatorze to tez dwie niezalezne rzeczy: profil GW24 ma swoje
@@ -287,6 +287,7 @@ const pct = n => (n*100).toLocaleString("pl-PL",{minimumFractionDigits:2,maximum
 function load(){
   try{
     const s = JSON.parse(localStorage.getItem(KEY) || "{}");
+    if (s.rate === 4.3775) delete s.rate;   // stary domyslny kurs nie ma przykrywac nowego
     SET.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
     if (s.mode) mode = s.mode;
     if (s.gw24 != null) gw24 = !!s.gw24;
